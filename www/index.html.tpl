@@ -27,6 +27,18 @@
           figcaption {
             font-weight: bold;
           }
+          .semester-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5em;
+            margin: 1.5em 0;
+          }
+          .semester-groups h2 {
+            margin: 0 0 0.35em 0;
+          }
+          .semester-groups ul {
+            margin: 0;
+          }
         </style>
     </head>
     <body>
@@ -41,10 +53,9 @@
                 is still in beta, we encourage you to try it out and give us feedback. We think you'll like it.-->
             </p>
             <p>Click one of the following links to <strong>start searching for your courses:</strong></p>
-            <ul>
-$LIST_ITEMS
-                <!--<li><a href="v1.5/">Search Spring 2018 Courses using Pop 1.5 (BETA)</a></li>-->
-            </ul>
+            <div class="semester-groups">
+                $SEMESTER_GROUPS
+            </div>
             <p>Has the schedule been published for a new semester but it's not up on Pop yet? <a href="mailto:eric@weclarify.com">Contact us! eric [at] weclarify [dot] com</a></p>
             <!--<figure>
                 <figcaption>Pop 1.5</figcaption>
