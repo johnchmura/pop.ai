@@ -10,8 +10,32 @@ Searches are performed instantly as the user types. There is only one search tex
 
 ## Installation
 
-To get soda up and running, just clone this repo and paste this line into a terminal:
+To get Pop up and running with the current IIT course feed:
 
-    cd courses && python courses.py && cd .. && python build.py release && python server.py
+1. Generate the site data and semester pages:
 
-This will download a list of courses from https://github.com/evanw/banner, compile the course information, and serve soda on http://localhost:8000/. If you would like to get an up-to-date version of the current courses, you can also clone the banner repo and perform the scraping yourself. In that case, make sure to copy the scraped file `banner.pickle` to `./courses/` before running `courses.py`.
+    ```bash
+    python scrape.py site
+    ```
+
+    If you only want one term, pass a term code or term name:
+
+    ```bash
+    python scrape.py site --term 202710
+    ```
+
+2. Build the browser bundle:
+
+    ```bash
+    python build.py release
+    ```
+
+3. Start the local server:
+
+    ```bash
+    python server.py
+    ```
+
+Then open http://localhost:8000/ in your browser. The generated site files live under `www/` and the semester-specific course data is written to `www/data/`.
+
+Note: the current IIT feed does not expose Banner-style CRNs, so the scraper generates stable synthetic section IDs for browsing and cart state.

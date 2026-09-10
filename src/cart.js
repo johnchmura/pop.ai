@@ -211,13 +211,33 @@ var cart = {
           var parser = new DOMParser();
           var doc = parser.parseFromString(data, 'text/html');
 
-          var seatsRow = Array.from(doc.querySelectorAll('th')).find(th => th.textContent.includes("Seats"))?.parentElement;
-          var waitlistRow = Array.from(doc.querySelectorAll('th')).find(th => th.textContent.includes("Waitlist Seats"))?.parentElement;
+          var seatsRow = null;
+          var waitlistRow = null;
+          var headings = doc.querySelectorAll('th');
+          for (var k = 0; k < headings.length; k++) {
+            var heading = headings[k];
+            if (!seatsRow && heading.textContent.indexOf('Seats') != -1) {
+              seatsRow = heading.parentElement;
+            }
+            if (!waitlistRow && heading.textContent.indexOf('Waitlist Seats') != -1) {
+              waitlistRow = heading.parentElement;
+            }
+          }
 
-          var seats = seatsRow ? Array.from(seatsRow.querySelectorAll('td.dddefault')).map(td => parseInt(td.textContent, 10)) : [0, 0, 0];
-          var waitlist = waitlistRow ? Array.from(waitlistRow.querySelectorAll('td.dddefault')).map(td => parseInt(td.textContent, 10)) : [0, 0, 0];
+          function tableValues(row) {
+            if (!row) return [0, 0, 0];
+            var cells = row.querySelectorAll('td.dddefault');
+            var values = [];
+            for (var m = 0; m < cells.length; m++) {
+              values.push(parseInt(cells[m].textContent, 10));
+            }
+            return values;
+          }
 
-          if (Number.parseInt(seats[3])===0) {
+          var seats = tableValues(seatsRow);
+          var waitlist = tableValues(waitlistRow);
+
+          if (parseInt(seats[3], 10)===0) {
             $('strong.fullalert').remove();
             $('a[id$="-cart-'+crn+'-link"]').parents('.section').append(' <strong class="fullalert">(FULL - ' + waitlist[2] + ' on waitlist)</strong>');
             $('a[id$="-cart-'+crn+'-link"]').parents('.cart-course').css('background','#FAA');
