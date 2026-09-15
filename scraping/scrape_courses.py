@@ -1,8 +1,28 @@
+'''
+Scrapes the course catalog for times, professors, etc from courses. Then joins with the big haul of all
+course descriptions (pre-reqs, coreqs, credits, etc) from the banner on course id. Outputs in the format
+pop likes.
+
+Usage:
+    python scrape_courses.py <semester> <year> [-s <subject1> <subject2> ...]
+    
+    Example:
+        python scrape_courses.py fall 2024 -s CS MATH
+
+Defaults to all subjects if none are specified. Outputs to www/data/<semester>_<year>.js
+
+'''
+
 import argparse
-import requests
-import sys
 import json
-import os
+import sys
+from pathlib import Path
+
+import requests
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "www" / "data"
+CATALOG_PATH = DATA_DIR / "full_catalog.json"
 
 ALL_SUBJECTS = [
     {"subjectCode":"AAH","subjectDesc":"Art and Architectural History"},
@@ -130,6 +150,41 @@ def format_time(time_str):
             
     return " - ".join(formatted_parts)
 
+def normalize_code(code):
+    return " ".join(str(code).split()).upper()
+
+def catalog_attributes(entry):
+    parts = []
+    fields = [
+        ("Credits", entry.get("credits")),
+        ("Lecture", entry.get("lecture")),
+        ("Lab", entry.get("lab")),
+        ("Prerequisite(s)", entry.get("prerequisites")),
+        ("Corequisite(s)", entry.get("corequisites")),
+        ("Satisfies", entry.get("satisfies")),
+    ]
+    for label, value in fields:
+        text = empty_str(value)
+        if text:
+            parts.append(f"{label}: {text}")
+    if not parts:
+        return ""
+    return ". ".join(parts) + "."
+
+def load_catalog(path):
+    if not path.exists():
+        print(f"Warning: catalog file not found at {path}; descriptions will be empty")
+        return {}
+    with open(path, encoding="utf-8") as f:
+        courses = json.load(f)
+    indexed = {}
+    for entry in courses:
+        code = normalize_code(entry.get("code", ""))
+        if code:
+            indexed[code] = entry
+    print(f"Loaded {len(indexed)} catalog courses from {path}")
+    return indexed
+
 def main():
     parser = argparse.ArgumentParser(description="Fetch and compile Course Status Report to JS.")
     parser.add_argument("semester", choices=["spring", "summer", "fall"], type=str.lower)
@@ -170,8 +225,10 @@ def main():
         sys.exit(1)
 
     print("Formatting times and grouping sections for Pop expectations")
-    
+
+    catalog = load_catalog(CATALOG_PATH)
     courses_map = {}
+    matched = 0
 
     for row in raw_csr_data:
         subj = row.get("courseSubject", "")
@@ -182,11 +239,19 @@ def main():
             continue
 
         if course_name not in courses_map:
+            catalog_entry = catalog.get(normalize_code(course_name))
+            if catalog_entry:
+                matched += 1
+                description = catalog_entry.get("description") or ""
+                attributes = catalog_attributes(catalog_entry)
+            else:
+                description = ""
+                attributes = ""
             courses_map[course_name] = {
                 "name": course_name,
                 "title": row.get("courseTitle", "Unknown Title"),
-                "description": "",
-                "attributes": "",
+                "description": description,
+                "attributes": attributes,
                 "sections": {}
             }
 
@@ -219,6 +284,8 @@ def main():
 
     courses_array = list(courses_map.values())
     print(f"Compiled into {len(courses_array)} unique courses.")
+    if catalog:
+        print(f"Joined catalog descriptions onto {matched} of {len(courses_array)} courses.")
 
     js_content = (
         f'var semesters = ["{semester_name}"];\n'
@@ -226,8 +293,8 @@ def main():
         f'var courses = {json.dumps(courses_array, indent=4)};\n'
     )
 
-    os.makedirs("www/data", exist_ok=True)
-    filename = f"www/data/{args.semester.lower()}_{args.year}.js"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    filename = DATA_DIR / f"{args.semester.lower()}_{args.year}.js"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(js_content)
 
