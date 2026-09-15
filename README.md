@@ -1,17 +1,34 @@
-# Soda
+# Pop.ai
 
-Currently hosted at: http://madebyevan.com/soda/app/
+Search Illinois Tech courses in the browser: one search box, a cart, and a schedule.
 
-Soda is a replacement course browser for Brown University. The system at Brown is called Banner and has a terrible search interface. There is essentially a widget for every field in the course database. Besides being cumbersome, the system is also slow and mistakes cost the user time as the request bounces back from the server. This delay is especially bad around the start of the semester when all students at Brown are using the system to schedule their courses.
+This started as [Soda](http://madebyevan.com/soda/app/) by [Evan Wallace](https://github.com/evanw/) at Brown. [Eric Tendian](https://tendian.io/) adapted it for Illinois Tech as Pop; this repo is a fork of [clarifyeducation/pop](https://github.com/clarifyeducation/pop). This fork will enhance this great project with AI elements to further help the students at IIT.
 
-Soda fixes all this. The entire list of current courses is downloaded to the browser once at page load time, after which the entire app runs client-side. While this is a higher initial load, the common usage pattern is relatively long periods of scheduling where a client-side app like Soda actually saves in data transfer. In addition, the entire list of courses can be gzipped and cached by the browser, so the actual data transfer overhead isn't bad at all.
+## Files
 
-Searches are performed instantly as the user types. There is only one search textbox, which can search titles, departments, professors, buildings, and other metadata and contains some extra smarts to pick out common course abbreviations in use around the campus. There are several shortcomings however: Soda currently has no way of scraping textbook info, and Soda may be slightly out of date since its data represents a snapshot of Banner in the past.
+- [src/](src/) - client app (`search.js`, `cart.js`, `schedule.js`, `options.js`, `main.js`). [build.py](build.py) concatenates these into `www/soda.js`.
+- [www/](www/) - static UI (`style.css` and templates). [www/semester.html.tpl](www/semester.html.tpl) is the search page (`$SEMESTER_NAME`, `$SEMESTER_DATA`). [www/index.html.tpl](www/index.html.tpl) is the landing page.
+- [scraping/scrape_courses.py](scraping/scrape_courses.py) - Course Status Report dump to `www/data/<semester>_<year>.js`.
+- [scraping/scrape_descriptions.py](scraping/scrape_descriptions.py) - bulletin catalog to `www/data/full_catalog.json` (run rarely).
+- [server.py](server.py) - serves `www/` on port 8000.
+- [run.sh](run.sh) - sets `SEMESTER_NAME` / `SEMESTER_DATA`, runs `build.py`, writes the semester HTML, starts the server.
+- [update-site.sh](update-site.sh) - builds every semester page and uploads to S3.
+- [requirements.txt](requirements.txt) - Python deps. [Dockerfile](Dockerfile) - deploy image.
 
-## Installation
+## Run to Setup
+```bash
+git clone https://github.com/johnchmura/pop.ai.git
 
-To get soda up and running, just clone this repo and paste this line into a terminal:
+#setup venv
+python -m venv .venv
+source .venv/bin/activate
 
-    cd courses && python courses.py && cd .. && python build.py release && python server.py
+pip install -r requirements.txt
+python scraping/scrape_descriptions.py
+python scraping/scrape_courses.py fall 2026
+./run.sh fall 2026
+```
 
-This will download a list of courses from https://github.com/evanw/banner, compile the course information, and serve soda on http://localhost:8000/. If you would like to get an up-to-date version of the current courses, you can also clone the banner repo and perform the scraping yourself. In that case, make sure to copy the scraped file `banner.pickle` to `./courses/` before running `courses.py`.
+Open http://localhost:8000/fall2026.html
+
+`run.sh` needs `envsubst` (`sudo apt install gettext-base` if it is missing). Skip the descriptions scrape if `www/data/full_catalog.json` already exists.
