@@ -5,6 +5,7 @@ var search = {
   _equalsRegex: null,
   _startsWithRegex: null,
   _matchesToBeAdded: [],
+  _expandedTypes: {},
 
   load: function() {
     function checkForChange() {
@@ -53,10 +54,12 @@ var search = {
     $('#' + id).html(this._courseToHTML(course, options.courseDetail));
   },
 
-  // call to expand all collapsed sections in a course, which happens if there are five or more similar sections
-  // (id is the value of the id attribute on the div, which looks like 'csci1230')
-  expandSections: function(id) {
-    $('#' + id + '-sections').html(this._sectionsToHTML(this._courseFromID(id).sections));
+  // expand or collapse one section type (LEC, LAB, ...) without opening the others
+  toggleSections: function(id, sectionType) {
+    var expanded = this._expandedTypes[id] || {};
+    expanded[sectionType] = !expanded[sectionType];
+    this._expandedTypes[id] = expanded;
+    $('#' + id + '-sections').html(this._sectionsToHTML(this._courseFromID(id).sections, id));
   },
 
   // convert a course name like 'CSCI 1230' to an html id like 'csci1230'
@@ -137,19 +140,22 @@ var search = {
   },
 
   // create a html representation of the given list of sections, assuming they all have the same type
-  // (if expansionHref is given and there are five or more sections, this will create a
-  // collapsed link that points to expansionHref instead of a list of all the sections)
-  _sectionTypeToHTML: function(sections, expansionHref) {
+  _sectionTypeToHTML: function(sections, courseId, sectionType) {
     var html = '';
-    if (!options.shouldCollapseSimilarSections || expansionHref == undefined || sections.length < 5) {
+    var canCollapse = options.shouldCollapseSimilarSections && courseId && sections.length >= 5;
+    var isExpanded = canCollapse && this._expandedTypes[courseId] && this._expandedTypes[courseId][sectionType];
+    var toggleHref = 'javascript:search.toggleSections(\'' + courseId + '\',\'' + sectionType + '\')';
+
+    if (!canCollapse || isExpanded) {
       for (var i = 0; i < sections.length; i++)
         html += this._sectionToHTML(sections[i]);
+      if (isExpanded) {
+        html += '<a class="section" href="' + toggleHref + '">' + sectionType + ' (hide sections)</a>';
+      }
     } else {
-      // collapse multiple sections into one
-      html += '<a class="section" href="' + expansionHref + '">' + sections[0].type;
+      html += '<a class="section" href="' + toggleHref + '">' + sections[0].type;
       html += ' (show all ' + sections.length + ' sections)';
 
-      // show a '...' if stuff matches in the collapsed section
       if (options.shouldSearchSections) {
         for (var i = 0; i < sections.length; i++) {
           var text = this._textForSection(sections[i]);
@@ -165,20 +171,18 @@ var search = {
     return html;
   },
 
-  // return the html representation of all the sections for a course (if expansionHref is given,
-  // sections of the same type will be collapsed into links that point to expansionHref as needed)
-  _sectionsToHTML: function(semesters, expansionHref) {
+  // return the html representation of all the sections for a course
+  _sectionsToHTML: function(semesters, courseId) {
     var html = '<table>';
     for (var semester in semesters) {
       html += '<tr><td class="semester">' + (options.shouldSearchSections ? this._highlightQuery(semester) : semester) + '</td><td>';
       var sections = semesters[semester];
 
-      // special case classes so they come out on top
       if ('Class' in sections)
-        html += this._sectionTypeToHTML(sections['Class'], expansionHref);
+        html += this._sectionTypeToHTML(sections['Class'], courseId, 'Class');
       for (var sectionType in sections) {
         if (sectionType != '' && sectionType != 'Class') {
-          html += this._sectionTypeToHTML(sections[sectionType], expansionHref);
+          html += this._sectionTypeToHTML(sections[sectionType], courseId, sectionType);
         }
       }
 
@@ -215,7 +219,7 @@ var search = {
 
         // pre-expand the text if we matched a CRN, since it's the only thing there and we don't need to worry about crowding the results
         var id = this._nameToID(course.name);
-        html += '<div id="' + id + '-sections">' + this._sectionsToHTML(course.sections, this._matchedCRN ? null : 'javascript:search.expandSections(\'' + id + '\')') + '</div>';
+        html += '<div id="' + id + '-sections">' + this._sectionsToHTML(course.sections, this._matchedCRN ? null : id) + '</div>';
       }
     }
     return html;
@@ -227,6 +231,7 @@ var search = {
     var query = $('#search').val();
     if (query == this._lastQuery) return;
     this._lastQuery = query;
+    this._expandedTypes = {};
 
     // just show help if they have an empty query
     if (!this._compileRegexForQuery(query)) {
