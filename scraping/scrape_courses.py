@@ -117,8 +117,17 @@ def empty_str(val):
         return ""
     return s
 
+SCHEDULE_TYPES = {
+    "LEC": "Lecture",
+    "LAB": "Lab",
+    "IND": "Independent Study/Research",
+    "AC": "Accelerated Course",
+    "B": "Lecture/Lab",
+    "REC": "Recitation/Discussion",
+}
+
 def format_time(time_str):
-    """Converts '1125 - 1240' to '11:25am - 12:40pm'"""
+    """Converts '1125 - 1240' to '11:25 AM - 12:40 PM'"""
     time_str = empty_str(time_str)
     if not time_str:
         return ""
@@ -129,22 +138,19 @@ def format_time(time_str):
     formatted_parts = []
     
     for part in parts:
-        # Check if it's a 4-digit military time string like '1125'
         if len(part) == 4 and part.isdigit():
             hour = int(part[:2])
             minute = part[2:]
-            
-            period = "am"
-            if hour >= 12:
-                period = "pm"
-            
+            period = "PM" if hour >= 12 else "AM"
             display_hour = hour
             if hour > 12:
                 display_hour = hour - 12
             elif hour == 0:
                 display_hour = 12
-                
-            formatted_parts.append(f"{display_hour}:{minute}{period}")
+            if minute == "00":
+                formatted_parts.append(f"{display_hour} {period}")
+            else:
+                formatted_parts.append(f"{display_hour}:{minute} {period}")
         else:
             formatted_parts.append(part)
             
@@ -258,21 +264,43 @@ def main():
         if semester_name not in courses_map[course_name]["sections"]:
             courses_map[course_name]["sections"][semester_name] = {}
 
-        course_type = row.get("courseType", "UNK")
-        if course_type not in courses_map[course_name]["sections"][semester_name]:
-            courses_map[course_name]["sections"][semester_name][course_type] = []
+        code = empty_str(row.get("courseType"))
+        schedule_type = SCHEDULE_TYPES.get(code, code)
+        bucket = "Internet" if "internet" in empty_str(row.get("campus")).lower() else "Class"
+        if bucket not in courses_map[course_name]["sections"][semester_name]:
+            courses_map[course_name]["sections"][semester_name][bucket] = []
 
-        raw_val = row.get("instructor")
-        instructor_raw = raw_val.strip() if raw_val else ""
-        instructors_list = [instructor_raw] if instructor_raw and instructor_raw != "-" else []
+        raw = empty_str(row.get("instructor"))
+        if "," in raw:
+            last, first = raw.split(",", 1)
+            raw = first.strip() + " " + last.strip()
+        instructors_list = [raw] if raw else []
+
+        days = empty_str(row.get("days"))
+        time = format_time(row.get("time"))
+        where = empty_str(row.get("locations"))
+        if not where and (days or (time and time != "TBA")):
+            where = "TBA"
+
+        row_title = empty_str(row.get("courseTitle"))
+        parent_title = courses_map[course_name]["title"]
+        special_title = row_title if row_title and row_title != parent_title else ""
+
+        available = row.get("available")
+        if available is None:
+            available = ""
 
         section_obj = {
             "crn": row.get("departmentCode", ""),
+            "schedule_type": schedule_type,
+            "type": bucket,
+            "available": available,
+            "special_title": special_title,
             "meetings": [
                 {
-                    "days": empty_str(row.get("days")),
-                    "time": format_time(row.get("time")),
-                    "where": empty_str(row.get("locations")),
+                    "days": days,
+                    "time": time,
+                    "where": where,
                     "instructors": instructors_list,
                     "dates": empty_str(row.get("dates"))
                 }
@@ -280,7 +308,7 @@ def main():
         }
         
         merged_section = {**row, **section_obj}
-        courses_map[course_name]["sections"][semester_name][course_type].append(merged_section)
+        courses_map[course_name]["sections"][semester_name][bucket].append(merged_section)
 
     courses_array = list(courses_map.values())
     print(f"Compiled into {len(courses_array)} unique courses.")
