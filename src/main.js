@@ -56,6 +56,7 @@ window.onload = function() {
   schedule.load();
   options.load();
   search.load();
+  semantic.load();
 
   // preload the notification image
   var img = new Image;

@@ -76,6 +76,7 @@
       </ul>
       <ul>
         <li>Any combination of the above: <a class="example" href="javascript:search.go('hist comp mw')">hist comp mw</a></li>
+        <li>Natural-language semantic search: type a description, then press Shift+Enter</li>
       </ul>
       <p>Pop runs best in Chrome and Safari (but also works in Firefox). The original interface, called "Soda", was made by <a href="http://madebyevan.com/">Evan Wallace</a> at Brown University in 2010; <a href="https://tendian.io/">Eric Tendian</a> adapted the website for the Illinois Institute of Technology in 2015.</p>
     </div>

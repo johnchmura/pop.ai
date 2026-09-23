@@ -156,7 +156,7 @@ var search = {
       html += '<a class="section" href="' + toggleHref + '">' + sections[0].type;
       html += ' (show all ' + sections.length + ' sections)';
 
-      if (options.shouldSearchSections) {
+      if (options.shouldSearchSections && this._startsWithRegex) {
         for (var i = 0; i < sections.length; i++) {
           var text = this._textForSection(sections[i]);
           if (this._startsWithRegex.test(text)) {
@@ -251,10 +251,15 @@ var search = {
       return b.score - a.score;
     });
 
-    // set up result streaming and get the initial batch
+    this.renderMatches(this._matchesToBeAdded, this._matchesToBeAdded.length, 'result');
+  },
+
+  renderMatches: function(matches, count, label) {
+    this._matchesToBeAdded = matches.slice();
     $('#content #defaultcontent').hide();
-    var len = this._matchesToBeAdded.length;
-    $('#content #dynamiccontent').html('<p id="footer">' + (len == 1 ? '1 result' : len + ' results') + '</p>');
+    var suffix = count == 1 ? '' : 's';
+    var footer = count + ' ' + label + suffix;
+    $('#content #dynamiccontent').html('<p id="footer">' + footer + '</p>');
     this._updateResults();
   },
 
@@ -278,11 +283,15 @@ var search = {
   // split text into substrings that either match or don't match the stored query (this may look
   // too simple but IE's implementation of String.split() is different and will need to be fixed)
   _splitTextWithQuery: function(text) {
+    if (!this._startsWithRegex) return [text];
     return text.split(this._startsWithRegex);
   },
 
   // returns the HTML for highlighting text with query
   _highlightQuery: function(text) {
+    if (!this._equalsRegex || !this._startsWithRegex) {
+      return textToHTML(text);
+    }
     var fragments = this._splitTextWithQuery(textToHTML(text));
     var html = '';
     for (var i = 0; i < fragments.length; i++) {
@@ -291,6 +300,13 @@ var search = {
       else html += fragment;
     }
     return html;
+  },
+
+  // Disable keyword highlighting (used by Describe mode before rendering API results)
+  clearHighlight: function() {
+    this._equalsRegex = null;
+    this._startsWithRegex = null;
+    this._lastQuery = '';
   },
 
   // returns a list of matching courses as { course, score } objects

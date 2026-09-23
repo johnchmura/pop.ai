@@ -99,6 +99,11 @@ ul {
   border: 1px solid #BF5F00;
 }
 
+.semantic-error {
+  color: #7F0000;
+  padding: 12px 0;
+}
+
 #options-button {
   display: block;
   text-decoration: none !important;
