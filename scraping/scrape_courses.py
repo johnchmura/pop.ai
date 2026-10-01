@@ -9,7 +9,7 @@ Usage:
     Example:
         python scrape_courses.py fall 2024 -s CS MATH
 
-Defaults to all subjects if none are specified. Outputs to www/data/<semester>_<year>.js
+Defaults to all subjects if none are specified. Outputs to www/data/<semester>_<year>.js and .json
 
 '''
 
@@ -322,11 +322,23 @@ def main():
     )
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    filename = DATA_DIR / f"{args.semester.lower()}_{args.year}.js"
-    with open(filename, "w", encoding="utf-8") as f:
+    base_name = f"{args.semester.lower()}_{args.year}"
+    js_filename = DATA_DIR / f"{base_name}.js"
+    json_filename = DATA_DIR / f"{base_name}.json"
+
+    with open(js_filename, "w", encoding="utf-8") as f:
         f.write(js_content)
 
-    print(f"Saved formatted catalog to {filename}")
+    json_payload = {
+        "semester_name": semester_name,
+        "term_code": term_code,
+        "courses": courses_array,
+    }
+    with open(json_filename, "w", encoding="utf-8") as f:
+        json.dump(json_payload, f, indent=2)
+
+    print(f"Saved formatted catalog to {js_filename}")
+    print(f"Saved JSON sidecar to {json_filename}")
 
 if __name__ == "__main__":
     main()

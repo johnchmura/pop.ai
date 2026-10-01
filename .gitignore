@@ -1,9 +1,9 @@
 .DS_Store
 *.pyc
-courses/banner.pickle
-courses/courses.js
-www/courses*.js
-www/courses*.js.gz
+__pycache__/
+.venv/
 www/soda.js
 www/data
 www/*.html
+data/qdrant
+.env
