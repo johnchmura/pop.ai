@@ -49,9 +49,8 @@ stop_stack() {
   fi
   kill_port 8000
   kill_port 8001
-  pkill -f "uvicorn api:app" 2>/dev/null || true
-  pkill -f "uvicorn api.main:app" 2>/dev/null || true
-  pkill -f "[Pp]ython3? server.py" 2>/dev/null || true
+  pkill -f "uvicorn app.api:app" 2>/dev/null || true
+  pkill -f "[Pp]ython3? main.py serve" 2>/dev/null || true
   sleep 1
 }
 
@@ -62,18 +61,18 @@ cleanup() {
 
 stop_stack
 
-catalog_n=$(python3 -c "from db import catalog_count; print(catalog_count())" 2>/dev/null || echo 0)
-semester_n=$(python3 -c "from db import get_semester; print(1 if get_semester(season='${semester}', year=${year}) else 0)" 2>/dev/null || echo 0)
+catalog_n=$(python3 -c "from app.db import catalog_count; print(catalog_count())" 2>/dev/null || echo 0)
+semester_n=$(python3 -c "from app.db import get_semester; print(1 if get_semester(season='${semester}', year=${year}) else 0)" 2>/dev/null || echo 0)
 if [ "${catalog_n:-0}" -eq 0 ] || [ "${semester_n:-0}" -eq 0 ]; then
   if [ -f "www/data/full_catalog.json" ] || [ -f "www/data/${semester}_${year}.json" ]; then
     echo "Seeding SQLite from www/data..."
-    python3 import_data.py --all-semesters
+    python3 main.py import-data --all-semesters
   fi
 fi
 
 need_index=$reindex
 if [ "$need_index" -eq 0 ]; then
-  emb_n=$(python3 -c "from db import embedding_count; print(embedding_count(season='${semester}', year=${year}))" 2>/dev/null || echo 0)
+  emb_n=$(python3 -c "from app.db import embedding_count; print(embedding_count(season='${semester}', year=${year}))" 2>/dev/null || echo 0)
   if [ "${emb_n:-0}" -eq 0 ]; then
     echo "No embeddings for ${semester} ${year}; will reindex."
     need_index=1
@@ -82,17 +81,17 @@ fi
 
 if [ "$need_index" -eq 1 ]; then
   echo "Indexing ${semester} ${year} into SQLite (sqlite-vec)..."
-  python3 index_semester.py "$semester" "$year"
+  python3 main.py index "$semester" "$year"
 fi
 
 echo "Exporting ${semester} ${year} JS from SQLite for the UI..."
-python3 -c "from db import write_semester_files; write_semester_files('${semester}', ${year})"
+python3 -c "from app.db import write_semester_files; write_semester_files('${semester}', ${year})"
 
 export SEMESTER_NAME="$(echo "${semester:0:1}" | tr 'a-z' 'A-Z')${semester:1} $year"
 export SEMESTER_DATA="data/${semester}_${year}.js"
 html_name="$(echo "$SEMESTER_NAME" | tr -d ' ' | tr 'A-Z' 'a-z').html"
 
-python3 build.py
+python3 main.py build
 envsubst < www/semester.html.tpl > "www/${html_name}"
 
 trap cleanup EXIT INT TERM
@@ -101,7 +100,7 @@ echo "Starting semantic API on :8001 and static server on :8000..."
 echo "Open http://localhost:8000/${html_name}"
 echo "Shift+Enter runs semantic search. Ctrl+C shuts everything down."
 
-python3 -m uvicorn api:app --host 127.0.0.1 --port 8001 &
+python3 -m uvicorn app.api:app --host 127.0.0.1 --port 8001 &
 API_PID=$!
 
-python3 server.py
+python3 main.py serve

@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from db import upsert_catalog_courses  # noqa: E402
+from app.db import upsert_catalog_courses  # noqa: E402
 
 DATA_DIR = ROOT / "www" / "data"
 CATALOG_PATH = DATA_DIR / "full_catalog.json"

@@ -6,17 +6,12 @@ This started as [Soda](http://madebyevan.com/soda/app/) by [Evan Wallace](https:
 
 ## Files
 
-- [src/](src/) - client app (`search.js`, `cart.js`, `schedule.js`, `options.js`, `main.js`, `semantic.js`). [build.py](build.py) concatenates these into `www/soda.js`.
-- [www/](www/) - static UI (`style.css` and templates). [www/semester.html.tpl](www/semester.html.tpl) is the search page (`$SEMESTER_NAME`, `$SEMESTER_DATA`).
-- [data_models.py](data_models.py) - Pydantic models (`CatalogCourse`, `Semester`, `Offering`, `PopCourse`, `SemanticHit`, `EmbeddingRow`).
-- [db.py](db.py) - SQLite source of truth (`data/pop.db`): catalog, semester offerings, sqlite-vec embeddings.
-- [scraping/scrape_courses.py](scraping/scrape_courses.py) - Course Status Report into SQLite offerings.
-- [scraping/scrape_descriptions.py](scraping/scrape_descriptions.py) - bulletin catalog into SQLite (run rarely).
-- [index_semester.py](index_semester.py) - embed a semester into sqlite-vec.
-- [api.py](api.py) - FastAPI semantic search on port 8001 (`/health`, `/search/semantic`).
-- [server.py](server.py) - serves `www/` on port 8000.
-- [run.sh](run.sh) - indexes if needed, exports Pop JS from SQLite, starts API + static server.
-- [import_data.py](import_data.py) - one-shot import of legacy `www/data` JSON into SQLite.
+- [src/](src/) - client app; `python main.py build` concatenates into `www/soda.js`.
+- [www/](www/) - static UI and templates.
+- [app/](app/) - FastAPI API, Pydantic models, SQLite + sqlite-vec (`data/pop.db`).
+- [main.py](main.py) - CLI: `build`, `serve`, `index`, `import-data`.
+- [scraping/](scraping/) - course and catalog scrapers.
+- [run.sh](run.sh) - index if needed, export Pop JS, start API + static server.
 - [requirements.txt](requirements.txt) - Python deps.
 
 ## Run to Setup
@@ -34,7 +29,29 @@ python scraping/scrape_courses.py fall 2026
 
 Open http://localhost:8000/fall2026.html
 
-Shift+Enter runs semantic search (API on :8001). `run.sh` regenerates the Pop JS cache from SQLite and needs `envsubst` (`sudo apt install gettext-base` if missing).
+Shift+Enter runs semantic search (API on :8001). `run.sh` needs `envsubst` (`sudo apt install gettext-base` if missing).
+
+After changing embedding text logic, reindex so vectors match:
+
+```bash
+./run.sh fall 2026 --reindex
+```
+
+Optional clean DB (drops leftover unused columns like old `meta_json`):
+
+```bash
+rm data/pop.db
+python scraping/scrape_descriptions.py
+python scraping/scrape_courses.py fall 2026
+./run.sh fall 2026 --reindex
+```
+
+```bash
+python main.py build
+python main.py serve
+python main.py index fall 2026
+python main.py import-data --all-semesters
+```
 
 ## Tests
 ```bash

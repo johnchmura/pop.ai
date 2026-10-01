@@ -10,7 +10,7 @@ from typing import Any
 
 import sqlite_vec
 
-from data_models import (
+from app.data_models import (
     CatalogCourse,
     EmbeddingRow,
     Offering,
@@ -19,7 +19,7 @@ from data_models import (
     SemanticHit,
 )
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DB_PATH = ROOT / "data" / "pop.db"
 VECTOR_SIZE = 384
 
@@ -63,14 +63,12 @@ CREATE TABLE IF NOT EXISTS course_embeddings (
     course_name TEXT NOT NULL,
     title TEXT NOT NULL DEFAULT '',
     embedding_text TEXT NOT NULL DEFAULT '',
-    meta_json TEXT NOT NULL DEFAULT '{}',
     UNIQUE(semester_id, course_name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_courses_semester ON courses(semester_id);
 CREATE INDEX IF NOT EXISTS idx_courses_name ON courses(course_name);
 CREATE INDEX IF NOT EXISTS idx_embeddings_semester ON course_embeddings(semester_id);
-CREATE INDEX IF NOT EXISTS idx_embeddings_name ON course_embeddings(course_name);
 """
 
 VEC_TABLE_SQL = f"""
@@ -118,6 +116,17 @@ def catalog_attributes(entry: CatalogCourse | dict[str, Any]) -> str:
 
 def semester_label(season: str, year: int) -> str:
     return f"{season.capitalize()} {year}"
+
+
+def term_code(season: str, year: int) -> str:
+    season = season.lower()
+    if season == "fall":
+        return f"{year + 1}10"
+    if season == "spring":
+        return f"{year}20"
+    if season == "summer":
+        return f"{year}30"
+    raise ValueError(f"Invalid semester: {season}")
 
 
 def get_db_path() -> Path:
@@ -535,15 +544,14 @@ def replace_semester_embeddings(
         cur = conn.execute(
             """
             INSERT INTO course_embeddings (
-                semester_id, course_name, title, embedding_text, meta_json
-            ) VALUES (?, ?, ?, ?, ?)
+                semester_id, course_name, title, embedding_text
+            ) VALUES (?, ?, ?, ?)
             """,
             (
                 semester_id,
                 course_name,
                 empty_str(row.title),
                 empty_str(row.embedding_text),
-                "{}",
             ),
         )
         row_id = int(cur.lastrowid)
@@ -611,25 +619,3 @@ def semantic_search(
     if owned:
         conn.close()
     return results
-
-
-def embedding_status(conn: sqlite3.Connection | None = None) -> dict[str, Any]:
-    conn, owned = _ensure(conn)
-    points = conn.execute("SELECT COUNT(*) AS n FROM course_embeddings").fetchone()
-    rows = conn.execute(
-        """
-        SELECT s.label, COUNT(ce.id) AS n
-        FROM course_embeddings ce
-        JOIN semesters s ON s.id = ce.semester_id
-        GROUP BY s.label
-        ORDER BY s.label
-        """
-    ).fetchall()
-    result = {
-        "embedding_count": int(points["n"]),
-        "indexed_semesters": [row["label"] for row in rows],
-        "counts_by_semester": {row["label"]: int(row["n"]) for row in rows},
-    }
-    if owned:
-        conn.close()
-    return result

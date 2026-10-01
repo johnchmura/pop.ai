@@ -41,7 +41,6 @@ class Offering(BaseModel):
     course_name: str = Field(validation_alias="name")
     title: str = ""
     sections: dict[str, Any] = Field(default_factory=dict)
-    semester_id: int | None = None
 
 
 class PopCourse(BaseModel):

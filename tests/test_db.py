@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from data_models import CatalogCourse, PopCourse, Semester
-from db import (
+from app.data_models import CatalogCourse, PopCourse, Semester
+from app.db import (
     catalog_attributes,
     catalog_count,
     connect,

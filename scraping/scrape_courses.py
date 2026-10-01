@@ -21,10 +21,11 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from data_models import Offering  # noqa: E402
-from db import (  # noqa: E402
+from app.data_models import Offering  # noqa: E402
+from app.db import (  # noqa: E402
     empty_str,
     replace_semester_courses,
+    term_code,
     upsert_semester,
 )
 
@@ -102,17 +103,6 @@ ALL_SUBJECTS = [
     {"subjectCode":"UCS","subjectDesc":"Undergrad Continuing Studies"}
 ]
 
-def get_term_code(semester, year):
-    semester = semester.lower()
-    if semester == 'fall':
-        return f"{year + 1}10"
-    elif semester == 'spring':
-        return f"{year}20"
-    elif semester == 'summer':
-        return f"{year}30"
-    else:
-        raise ValueError("Invalid semester")
-
 SCHEDULE_TYPES = {
     "LEC": "Lecture",
     "LAB": "Lab",
@@ -162,7 +152,7 @@ def main():
 
     args = parser.parse_args()
 
-    term_code = get_term_code(args.semester, args.year)
+    code = term_code(args.semester, args.year)
     semester_name = f"{args.semester.capitalize()} {args.year}"
 
     if args.subjects:
@@ -176,7 +166,7 @@ def main():
 
     url = "https://wildfly-prd.iit.edu/coursestatusreport/api/report/getCSR"
     payload = {
-        "selectedTerm": term_code,
+        "selectedTerm": code,
         "selectedSubjectsForTerm": selected_subjects
     }
 
@@ -212,14 +202,11 @@ def main():
                 "sections": {},
             }
 
-        if semester_name not in courses_map[course_name]["sections"]:
-            courses_map[course_name]["sections"][semester_name] = {}
-
-        code = empty_str(row.get("courseType"))
-        schedule_type = SCHEDULE_TYPES.get(code, code)
+        type_code = empty_str(row.get("courseType"))
+        schedule_type = SCHEDULE_TYPES.get(type_code, type_code)
         bucket = "Internet" if "internet" in empty_str(row.get("campus")).lower() else "Class"
-        if bucket not in courses_map[course_name]["sections"][semester_name]:
-            courses_map[course_name]["sections"][semester_name][bucket] = []
+        if bucket not in courses_map[course_name]["sections"]:
+            courses_map[course_name]["sections"][bucket] = []
 
         raw = empty_str(row.get("instructor"))
         if "," in raw:
@@ -253,13 +240,11 @@ def main():
                     "time": time,
                     "where": where,
                     "instructors": instructors_list,
-                    "dates": empty_str(row.get("dates"))
+                    "dates": empty_str(row.get("dates")),
                 }
-            ]
+            ],
         }
-
-        merged_section = {**row, **section_obj}
-        courses_map[course_name]["sections"][semester_name][bucket].append(merged_section)
+        courses_map[course_name]["sections"][bucket].append(section_obj)
 
     offerings = [Offering.model_validate(course) for course in courses_map.values()]
     print(f"Compiled into {len(offerings)} unique courses.")
@@ -267,7 +252,7 @@ def main():
     semester_id = upsert_semester(
         args.semester.lower(),
         args.year,
-        term_code=term_code,
+        term_code=code,
         label=semester_name,
     )
     db_count = replace_semester_courses(semester_id, offerings)

@@ -10,18 +10,16 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from data_models import EmbeddingRow, SemanticHit
-from db import (
+from app.data_models import EmbeddingRow, SemanticHit
+from app.db import (
     VECTOR_SIZE,
     connect,
     embedding_count,
-    embedding_status,
     init_db,
     replace_semester_embeddings,
     semantic_search,
     upsert_semester,
 )
-from index_semester import build_embedding_text
 
 
 def unit_vector(index: int, size: int = VECTOR_SIZE) -> list[float]:
@@ -125,13 +123,6 @@ class SemanticVecTests(unittest.TestCase):
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0].course_name, "CS 331")
 
-    def test_embedding_status(self):
-        self._seed_embeddings()
-        status = embedding_status(conn=self.conn)
-        self.assertEqual(status["embedding_count"], 3)
-        self.assertIn("Fall 2026", status["indexed_semesters"])
-        self.assertEqual(status["counts_by_semester"]["Fall 2026"], 2)
-
     def test_api_search_returns_embedding_text(self):
         sample = [
             SemanticHit(
@@ -141,10 +132,10 @@ class SemanticVecTests(unittest.TestCase):
                 embedding_text="Course: CS 430 — algorithms graph theory",
             )
         ]
-        with patch("api.embed_query", return_value=near_vector(0)):
-            with patch("api.semantic_search", return_value=sample):
-                with patch("api.init_db"):
-                    import api
+        with patch("app.api.embed_query", return_value=near_vector(0)):
+            with patch("app.api.semantic_search", return_value=sample):
+                with patch("app.api.init_db"):
+                    from app import api
 
                     client = TestClient(api.app)
                     response = client.post(
@@ -166,47 +157,12 @@ class SemanticVecTests(unittest.TestCase):
 
 class IndexerFailClosedTests(unittest.TestCase):
     def test_index_requires_sqlite_semester(self):
-        import index_semester
+        from app import api
 
-        with patch("index_semester.get_semester", return_value=None):
-            with patch("sys.argv", ["index_semester.py", "fall", "2099"]):
-                with self.assertRaises(SystemExit) as ctx:
-                    index_semester.main()
-                self.assertEqual(ctx.exception.code, 1)
-
-
-class EmbeddingTextTests(unittest.TestCase):
-    def test_build_embedding_text_from_dict(self):
-        text = build_embedding_text(
-            {
-                "name": "CS 430",
-                "title": "Introduction to Algorithms",
-                "description": "Analysis of algorithms and data structures.",
-                "attributes": (
-                    "Credits: 3. Lecture: 3. Lab: 0. "
-                    "Prerequisite(s): CS 331. "
-                    "Corequisite(s): None. "
-                    "Satisfies: None."
-                ),
-                "sections": {
-                    "Fall 2026": {
-                        "Class": [
-                            {
-                                "crn": "12345",
-                                "schedule_type": "Lecture",
-                                "special_title": "Advanced Topics",
-                                "meetings": [],
-                            }
-                        ]
-                    }
-                },
-            }
-        )
-        self.assertIn("Course: CS 430 — Introduction to Algorithms", text)
-        self.assertIn("Subject: Computer Science", text)
-        self.assertIn("Description: Analysis of algorithms", text)
-        self.assertIn("Prerequisites: CS 331", text)
-        self.assertIn("Section topics: Advanced Topics", text)
+        with patch("app.api.get_semester", return_value=None):
+            with self.assertRaises(SystemExit) as ctx:
+                api.index_semester("fall", 2099)
+            self.assertEqual(ctx.exception.code, 1)
 
 
 if __name__ == "__main__":
