@@ -2,9 +2,7 @@ import unittest
 
 from index_semester import (
     build_embedding_text,
-    description_missing,
     parse_attributes,
-    parse_time_range,
     subject_label,
 )
 
@@ -74,16 +72,7 @@ class IndexingTests(unittest.TestCase):
     def test_description_missing(self):
         course = dict(SAMPLE_COURSE)
         course["description"] = ""
-        self.assertTrue(description_missing(course))
         self.assertIn("Description: None", build_embedding_text(course))
-
-    def test_parse_time_range(self):
-        self.assertEqual(
-            parse_time_range("11:25 AM - 12:40 PM"),
-            {"start_min": 685, "end_min": 760},
-        )
-        self.assertIsNone(parse_time_range("TBA"))
-        self.assertIsNone(parse_time_range(""))
 
 
 if __name__ == "__main__":

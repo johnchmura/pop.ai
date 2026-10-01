@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop any previous Pop stack, then start Docker Qdrant + semantic API + static server.
+# Stop any previous Pop stack, then start semantic API + static server (SQLite + sqlite-vec).
 set -e
 cd "$(dirname "$0")"
 
@@ -41,7 +41,7 @@ kill_port() {
 }
 
 stop_stack() {
-  echo "Stopping Pop servers and Docker Qdrant..."
+  echo "Stopping Pop servers..."
   if [ -n "${API_PID:-}" ]; then
     kill "$API_PID" 2>/dev/null || true
     wait "$API_PID" 2>/dev/null || true
@@ -52,9 +52,6 @@ stop_stack() {
   pkill -f "uvicorn api:app" 2>/dev/null || true
   pkill -f "uvicorn api.main:app" 2>/dev/null || true
   pkill -f "[Pp]ython3? server.py" 2>/dev/null || true
-  if command -v docker >/dev/null 2>&1; then
-    docker compose down 2>/dev/null || true
-  fi
   sleep 1
 }
 
@@ -63,43 +60,33 @@ cleanup() {
   echo "Shutdown complete."
 }
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is required. Install Docker Desktop and enable WSL integration." >&2
-  exit 1
-fi
-
 stop_stack
 
-echo "Starting Docker Qdrant..."
-docker compose up -d
-
-echo "Waiting for Qdrant..."
-for i in $(seq 1 30); do
-  if curl -sf http://localhost:6333/readyz >/dev/null 2>&1; then
-    break
+catalog_n=$(python3 -c "from db import catalog_count; print(catalog_count())" 2>/dev/null || echo 0)
+semester_n=$(python3 -c "from db import get_semester; print(1 if get_semester(season='${semester}', year=${year}) else 0)" 2>/dev/null || echo 0)
+if [ "${catalog_n:-0}" -eq 0 ] || [ "${semester_n:-0}" -eq 0 ]; then
+  if [ -f "www/data/full_catalog.json" ] || [ -f "www/data/${semester}_${year}.json" ]; then
+    echo "Seeding SQLite from www/data..."
+    python3 import_data.py --all-semesters
   fi
-  if [ "$i" -eq 30 ]; then
-    echo "Qdrant did not become ready on :6333" >&2
-    exit 1
-  fi
-  sleep 1
-done
-echo "Qdrant ready."
+fi
 
 need_index=$reindex
 if [ "$need_index" -eq 0 ]; then
-  count=$(curl -sf "http://localhost:6333/collections/pop_courses" 2>/dev/null \
-    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('points_count',0))" 2>/dev/null || echo 0)
-  if [ "${count:-0}" -eq 0 ]; then
-    echo "Docker Qdrant collection empty; will reindex."
+  emb_n=$(python3 -c "from db import embedding_count; print(embedding_count(season='${semester}', year=${year}))" 2>/dev/null || echo 0)
+  if [ "${emb_n:-0}" -eq 0 ]; then
+    echo "No embeddings for ${semester} ${year}; will reindex."
     need_index=1
   fi
 fi
 
 if [ "$need_index" -eq 1 ]; then
-  echo "Indexing ${semester} ${year} into Docker Qdrant..."
+  echo "Indexing ${semester} ${year} into SQLite (sqlite-vec)..."
   python3 index_semester.py "$semester" "$year"
 fi
+
+echo "Exporting ${semester} ${year} JS from SQLite for the UI..."
+python3 -c "from db import write_semester_files; write_semester_files('${semester}', ${year})"
 
 export SEMESTER_NAME="$(echo "${semester:0:1}" | tr 'a-z' 'A-Z')${semester:1} $year"
 export SEMESTER_DATA="data/${semester}_${year}.js"
@@ -112,7 +99,7 @@ trap cleanup EXIT INT TERM
 
 echo "Starting semantic API on :8001 and static server on :8000..."
 echo "Open http://localhost:8000/${html_name}"
-echo "Use Describe mode for semantic lookup. Ctrl+C shuts everything down."
+echo "Shift+Enter runs semantic search. Ctrl+C shuts everything down."
 
 python3 -m uvicorn api:app --host 127.0.0.1 --port 8001 &
 API_PID=$!

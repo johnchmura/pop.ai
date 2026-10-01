@@ -58,7 +58,7 @@ var semantic = {
       if (requestId !== self._requestId) return;
       $('#content #dynamiccontent').html(
         '<p class="semantic-error">Semantic search failed. ' +
-        'Ensure Docker Qdrant and the API are running (./run.sh). ' +
+        'Ensure the API is running (./run.sh). ' +
         textToHTML(String(error.message || error)) +
         '</p>'
       );

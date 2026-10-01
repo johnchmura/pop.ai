@@ -1,28 +1,32 @@
 '''
-Scrapes the course catalog for times, professors, etc from courses. Then joins with the big haul of all
-course descriptions (pre-reqs, coreqs, credits, etc) from the banner on course id. Outputs in the format
-pop likes.
+Scrapes the Course Status Report for times, professors, etc. Writes semester
+offerings into SQLite only. Descriptions are joined from catalog_courses at
+export/index time (run.sh / write_semester_files).
 
 Usage:
     python scrape_courses.py <semester> <year> [-s <subject1> <subject2> ...]
-    
+
     Example:
         python scrape_courses.py fall 2024 -s CS MATH
 
-Defaults to all subjects if none are specified. Outputs to www/data/<semester>_<year>.js and .json
-
+Defaults to all subjects if none are specified.
 '''
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "www" / "data"
-CATALOG_PATH = DATA_DIR / "full_catalog.json"
+sys.path.insert(0, str(ROOT))
+
+from data_models import Offering  # noqa: E402
+from db import (  # noqa: E402
+    empty_str,
+    replace_semester_courses,
+    upsert_semester,
+)
 
 ALL_SUBJECTS = [
     {"subjectCode":"AAH","subjectDesc":"Art and Architectural History"},
@@ -109,14 +113,6 @@ def get_term_code(semester, year):
     else:
         raise ValueError("Invalid semester")
 
-def empty_str(val):
-    if val is None:
-        return ""
-    s = str(val).strip()
-    if s in ("", "-", "null", "None"):
-        return ""
-    return s
-
 SCHEDULE_TYPES = {
     "LEC": "Lecture",
     "LAB": "Lab",
@@ -156,43 +152,10 @@ def format_time(time_str):
             
     return " - ".join(formatted_parts)
 
-def normalize_code(code):
-    return " ".join(str(code).split()).upper()
-
-def catalog_attributes(entry):
-    parts = []
-    fields = [
-        ("Credits", entry.get("credits")),
-        ("Lecture", entry.get("lecture")),
-        ("Lab", entry.get("lab")),
-        ("Prerequisite(s)", entry.get("prerequisites")),
-        ("Corequisite(s)", entry.get("corequisites")),
-        ("Satisfies", entry.get("satisfies")),
-    ]
-    for label, value in fields:
-        text = empty_str(value)
-        if text:
-            parts.append(f"{label}: {text}")
-    if not parts:
-        return ""
-    return ". ".join(parts) + "."
-
-def load_catalog(path):
-    if not path.exists():
-        print(f"Warning: catalog file not found at {path}; descriptions will be empty")
-        return {}
-    with open(path, encoding="utf-8") as f:
-        courses = json.load(f)
-    indexed = {}
-    for entry in courses:
-        code = normalize_code(entry.get("code", ""))
-        if code:
-            indexed[code] = entry
-    print(f"Loaded {len(indexed)} catalog courses from {path}")
-    return indexed
-
 def main():
-    parser = argparse.ArgumentParser(description="Fetch and compile Course Status Report to JS.")
+    parser = argparse.ArgumentParser(
+        description="Fetch Course Status Report into SQLite offerings."
+    )
     parser.add_argument("semester", choices=["spring", "summer", "fall"], type=str.lower)
     parser.add_argument("year", type=int)
     parser.add_argument("-s", "--subjects", nargs="+", help="Specific subject codes to fetch")
@@ -224,41 +187,29 @@ def main():
         print(f"Request failed: {response.status_code}\n{response.text}")
         sys.exit(1)
 
-    raw_csr_data = response.json() 
-    
+    raw_csr_data = response.json()
+
     if not isinstance(raw_csr_data, list):
         print("Error: API did not return a list of rows as expected.")
         sys.exit(1)
 
-    print("Formatting times and grouping sections for Pop expectations")
+    print("Formatting times and grouping sections")
 
-    catalog = load_catalog(CATALOG_PATH)
     courses_map = {}
-    matched = 0
 
     for row in raw_csr_data:
         subj = row.get("courseSubject", "")
         num = row.get("courseNumber", "")
         course_name = f"{subj} {num}".strip()
-        
+
         if not course_name:
             continue
 
         if course_name not in courses_map:
-            catalog_entry = catalog.get(normalize_code(course_name))
-            if catalog_entry:
-                matched += 1
-                description = catalog_entry.get("description") or ""
-                attributes = catalog_attributes(catalog_entry)
-            else:
-                description = ""
-                attributes = ""
             courses_map[course_name] = {
                 "name": course_name,
                 "title": row.get("courseTitle", "Unknown Title"),
-                "description": description,
-                "attributes": attributes,
-                "sections": {}
+                "sections": {},
             }
 
         if semester_name not in courses_map[course_name]["sections"]:
@@ -306,39 +257,23 @@ def main():
                 }
             ]
         }
-        
+
         merged_section = {**row, **section_obj}
         courses_map[course_name]["sections"][semester_name][bucket].append(merged_section)
 
-    courses_array = list(courses_map.values())
-    print(f"Compiled into {len(courses_array)} unique courses.")
-    if catalog:
-        print(f"Joined catalog descriptions onto {matched} of {len(courses_array)} courses.")
+    offerings = [Offering.model_validate(course) for course in courses_map.values()]
+    print(f"Compiled into {len(offerings)} unique courses.")
 
-    js_content = (
-        f'var semesters = ["{semester_name}"];\n'
-        f'var semester_codes = {{"{semester_name}": "{term_code}"}};\n'
-        f'var courses = {json.dumps(courses_array, indent=4)};\n'
+    semester_id = upsert_semester(
+        args.semester.lower(),
+        args.year,
+        term_code=term_code,
+        label=semester_name,
     )
+    db_count = replace_semester_courses(semester_id, offerings)
+    print(f"Upserted {db_count} offerings for {semester_name} into SQLite.")
+    print("Run ./run.sh to export Pop JS and reindex embeddings.")
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    base_name = f"{args.semester.lower()}_{args.year}"
-    js_filename = DATA_DIR / f"{base_name}.js"
-    json_filename = DATA_DIR / f"{base_name}.json"
-
-    with open(js_filename, "w", encoding="utf-8") as f:
-        f.write(js_content)
-
-    json_payload = {
-        "semester_name": semester_name,
-        "term_code": term_code,
-        "courses": courses_array,
-    }
-    with open(json_filename, "w", encoding="utf-8") as f:
-        json.dump(json_payload, f, indent=2)
-
-    print(f"Saved formatted catalog to {js_filename}")
-    print(f"Saved JSON sidecar to {json_filename}")
 
 if __name__ == "__main__":
     main()

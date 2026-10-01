@@ -1,25 +1,14 @@
 #!/usr/bin/env python3
-"""Index semester courses into Docker Qdrant."""
+"""Index semester courses into SQLite (sqlite-vec)."""
 
 import argparse
-import json
 import re
 import sys
-from pathlib import Path
 from typing import Any
 
-from qdrant_client.http import models
-
-from api import (
-    embed_texts,
-    ensure_collection,
-    get_client,
-    point_id,
-    upsert_points,
-)
-
-ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "www" / "data"
+from api import embed_texts
+from data_models import EmbeddingRow, PopCourse
+from db import get_semester, load_semester_courses, replace_semester_embeddings
 
 SUBJECT_LABELS = {
     "AAH": "Art and Architectural History",
@@ -104,15 +93,6 @@ _ATTR_PATTERNS = {
     "satisfies": re.compile(r"Satisfies:\s*([^\.]+)", re.I),
 }
 
-_TIME_RANGE = re.compile(
-    r"(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)",
-    re.I,
-)
-
-
-def semester_name(semester: str, year: int) -> str:
-    return f"{semester.capitalize()} {year}"
-
 
 def subject_code(course_name: str) -> str:
     parts = course_name.strip().split()
@@ -133,27 +113,36 @@ def parse_attributes(attributes: str) -> dict[str, str]:
     return parsed
 
 
-def description_missing(course: dict[str, Any]) -> bool:
-    return not (course.get("description") or "").strip()
-
-
 def _none_if_empty(value: str) -> str:
     text = (value or "").strip()
     return text if text else "None"
 
 
-def _iter_sections(course: dict[str, Any]):
-    for semester_sections in (course.get("sections") or {}).values():
+def _iter_sections(course: PopCourse | dict[str, Any]):
+    sections = (
+        course.sections if isinstance(course, PopCourse) else (course.get("sections") or {})
+    )
+    for semester_sections in sections.values():
+        if not isinstance(semester_sections, dict):
+            continue
         for bucket, bucket_sections in semester_sections.items():
-            for section in bucket_sections:
+            for section in bucket_sections or []:
                 yield bucket, section
 
 
-def build_embedding_text(course: dict[str, Any]) -> str:
-    name = course.get("name", "")
-    title = course.get("title", "")
-    description = (course.get("description") or "").strip()
-    attrs = parse_attributes(course.get("attributes") or "")
+def build_embedding_text(course: PopCourse | dict[str, Any]) -> str:
+    if isinstance(course, PopCourse):
+        name = course.name
+        title = course.title
+        description = (course.description or "").strip()
+        attrs = parse_attributes(course.attributes or "")
+        sections = course.sections or {}
+    else:
+        name = course.get("name", "")
+        title = course.get("title", "")
+        description = (course.get("description") or "").strip()
+        attrs = parse_attributes(course.get("attributes") or "")
+        sections = course.get("sections") or {}
 
     special_titles = sorted({
         (section.get("special_title") or "").strip()
@@ -167,7 +156,8 @@ def build_embedding_text(course: dict[str, Any]) -> str:
     })
     delivery = sorted({
         bucket
-        for semester_sections in (course.get("sections") or {}).values()
+        for semester_sections in sections.values()
+        if isinstance(semester_sections, dict)
         for bucket in semester_sections.keys()
     })
 
@@ -189,170 +179,47 @@ def build_embedding_text(course: dict[str, Any]) -> str:
     ])
 
 
-def _to_minutes(hour: int, minute: int, period: str) -> int:
-    period = period.upper()
-    if period == "AM":
-        if hour == 12:
-            hour = 0
-    elif hour != 12:
-        hour += 12
-    return hour * 60 + minute
-
-
-def parse_time_range(time_str: str) -> dict[str, int] | None:
-    text = (time_str or "").strip()
-    if not text or text.upper() == "TBA":
-        return None
-    match = _TIME_RANGE.search(text)
-    if not match:
-        return None
-    return {
-        "start_min": _to_minutes(int(match.group(1)), int(match.group(2) or 0), match.group(3)),
-        "end_min": _to_minutes(int(match.group(4)), int(match.group(5) or 0), match.group(6)),
-    }
-
-
-def _available_count(value: Any) -> int:
-    if value is None or value == "":
-        return 0
-    try:
-        return max(0, int(value))
-    except (TypeError, ValueError):
-        return 0
-
-
-def build_payload(course: dict[str, Any], semester: str) -> dict[str, Any]:
-    instructors: set[str] = set()
-    days: set[str] = set()
-    campuses: set[str] = set()
-    delivery: set[str] = set()
-    crns: list[str] = []
-    time_ranges: list[dict[str, int]] = []
-    has_open_sections = False
-
-    attrs = parse_attributes(course.get("attributes") or "")
-    credits_raw = attrs.get("credits", "")
-    try:
-        credits = int(credits_raw) if credits_raw else None
-    except ValueError:
-        credits = None
-
-    for bucket, section in _iter_sections(course):
-        delivery.add(bucket)
-        crn = str(section.get("crn") or "").strip()
-        if crn:
-            crns.append(crn)
-        if _available_count(section.get("available")) > 0:
-            has_open_sections = True
-        campus = str(section.get("campus") or "").strip()
-        if campus:
-            campuses.add(campus)
-        for meeting in section.get("meetings") or []:
-            meeting_days = str(meeting.get("days") or "").strip()
-            if meeting_days and meeting_days.upper() != "TBA":
-                days.add(meeting_days)
-            parsed = parse_time_range(meeting.get("time") or "")
-            if parsed:
-                time_ranges.append(parsed)
-            for instructor in meeting.get("instructors") or []:
-                name = str(instructor).strip()
-                if name:
-                    instructors.add(name)
-
-    unique_ranges = []
-    seen = set()
-    for item in time_ranges:
-        key = (item["start_min"], item["end_min"])
-        if key not in seen:
-            seen.add(key)
-            unique_ranges.append(item)
-
-    return {
-        "semester": semester,
-        "course_name": course.get("name", ""),
-        "title": course.get("title", ""),
-        "subject_code": subject_code(course.get("name", "")),
-        "credits": credits,
-        "has_open_sections": has_open_sections,
-        "instructors": sorted(instructors),
-        "days": sorted(days),
-        "time_ranges": unique_ranges,
-        "campuses": sorted(campuses),
-        "delivery": sorted(delivery),
-        "crns": crns,
-        "description_missing": description_missing(course),
-    }
-
-
-def _parse_js_file(path: Path) -> dict:
-    content = path.read_text(encoding="utf-8")
-    semesters_match = re.search(r"var semesters = (\[[^\]]*\]);", content)
-    courses_match = re.search(r"var courses = (\[.*\]);?\s*$", content, re.S)
-    if not courses_match:
-        raise ValueError(f"Could not parse courses from {path}")
-    semesters = json.loads(semesters_match.group(1)) if semesters_match else []
-    courses = json.loads(courses_match.group(1))
-    return {"semester_name": semesters[0] if semesters else "", "courses": courses}
-
-
-def load_semester_data(semester: str, year: int) -> tuple[str, list[dict]]:
-    json_path = DATA_DIR / f"{semester.lower()}_{year}.json"
-    js_path = DATA_DIR / f"{semester.lower()}_{year}.js"
-    if json_path.exists():
-        with open(json_path, encoding="utf-8") as handle:
-            payload = json.load(handle)
-    elif js_path.exists():
-        payload = _parse_js_file(js_path)
-    else:
-        raise FileNotFoundError(
-            f"Missing semester data at {json_path} or {js_path}. "
-            "Run scraping/scrape_courses.py first."
-        )
-    name = payload.get("semester_name") or semester_name(semester, year)
-    return name, payload.get("courses") or []
-
-
-def build_points(semester: str, courses: list[dict]) -> list[models.PointStruct]:
+def build_embedding_rows(courses: list[PopCourse]) -> list[EmbeddingRow]:
     texts = [build_embedding_text(course) for course in courses]
     vectors = embed_texts(texts)
-    points = []
-    for course, vector in zip(courses, vectors):
-        course_name = course.get("name", "")
-        if not course_name:
+    rows = []
+    for course, text, vector in zip(courses, texts, vectors):
+        if not course.name:
             continue
-        points.append(
-            models.PointStruct(
-                id=point_id(semester, course_name),
+        rows.append(
+            EmbeddingRow(
+                course_name=course.name,
+                title=course.title,
+                embedding_text=text,
                 vector=vector,
-                payload=build_payload(course, semester),
             )
         )
-    return points
+    return rows
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Index semester courses into Qdrant.")
+    parser = argparse.ArgumentParser(description="Index semester courses into SQLite.")
     parser.add_argument("semester", choices=["spring", "summer", "fall"], type=str.lower)
     parser.add_argument("year", type=int)
-    parser.add_argument("--batch-size", type=int, default=64)
     args = parser.parse_args()
 
-    semester_label, courses = load_semester_data(args.semester, args.year)
-    if not courses:
-        print(f"No courses found for {semester_label}")
+    semester = get_semester(season=args.semester, year=args.year)
+    if not semester:
+        print(
+            f"Semester {args.semester} {args.year} not found in SQLite. "
+            "Run scraping/scrape_courses.py first."
+        )
         sys.exit(1)
 
-    print(f"Embedding {len(courses)} courses for {semester_label}...")
-    points = build_points(semester_label, courses)
-    client = get_client()
-    ensure_collection(client)
+    _, courses = load_semester_courses(season=args.semester, year=args.year)
+    if not courses:
+        print(f"No courses found for {semester.label}")
+        sys.exit(1)
 
-    for start in range(0, len(points), args.batch_size):
-        batch = points[start : start + args.batch_size]
-        upsert_points(batch, client)
-        print(f"Upserted {min(start + len(batch), len(points))}/{len(points)}")
-
-    print(f"Indexed {len(points)} courses for {semester_label}.")
+    print(f"Embedding {len(courses)} courses for {semester.label}...")
+    rows = build_embedding_rows(courses)
+    count = replace_semester_embeddings(semester.id, rows)
+    print(f"Indexed {count} courses for {semester.label} into SQLite.")
 
 
 if __name__ == "__main__":

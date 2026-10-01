@@ -4,6 +4,7 @@ running this. The other script auto-joins the catalog data with this huge haul o
 '''
 
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -11,6 +12,10 @@ import requests
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from db import upsert_catalog_courses  # noqa: E402
+
 DATA_DIR = ROOT / "www" / "data"
 CATALOG_PATH = DATA_DIR / "full_catalog.json"
 
@@ -109,9 +114,13 @@ def main():
     print(f"Saving to {CATALOG_PATH}")
 
     final_json = json.dumps(all_courses, indent=4).replace('\\u00a0', ' ')
+    all_courses = json.loads(final_json)
 
     with open(CATALOG_PATH, "w", encoding="utf-8") as f:
         f.write(final_json)
+
+    count = upsert_catalog_courses(all_courses)
+    print(f"Upserted {count} catalog courses into SQLite.")
 
 if __name__ == "__main__":
     main()
