@@ -157,6 +157,24 @@ def cmd_advisor_seed(args: argparse.Namespace) -> None:
     print("Loaded seed/ into the database: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
 
 
+def cmd_advisor_faculty(args: argparse.Namespace) -> None:
+    from app.advisor.store import import_faculty, open_db
+
+    payload = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    if args.read_on and isinstance(payload, list):
+        payload = {"read_on": args.read_on, "faculty": payload}
+    conn = open_db()
+    count = import_faculty(conn, payload)
+    if args.save_seed:
+        from app.advisor.store import SEED_DIR, get_value
+
+        out = {"read_on": get_value(conn, "faculty_read_on", ""), "faculty": get_value(conn, "faculty", [])}
+        (SEED_DIR / "faculty.json").write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"Saved {SEED_DIR / 'faculty.json'} (commit it so deploys use this data).")
+    conn.close()
+    print(f"Loaded {count} faculty into the database. Restart the advisor to use them.")
+
+
 def cmd_advisor_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -199,6 +217,11 @@ def main(argv: list[str] | None = None) -> None:
     seed_p.add_argument("--keep-catalog", action="store_true", help="Keep the catalog Pop scraped")
     seed_p.add_argument("--keep-sections", action="store_true", help="Keep the sections Pop scraped")
 
+    fac_p = sub.add_parser("advisor-faculty", help="Load faculty.json (from the iit-faculty-search scraper) into SQLite")
+    fac_p.add_argument("file", help="faculty.json")
+    fac_p.add_argument("--read-on", default="", help="When the directory was read, for example 2026-10-29")
+    fac_p.add_argument("--save-seed", action="store_true", help="Also write seed/faculty.json")
+
     serve_p = sub.add_parser("advisor-serve", help="Run the advisor web app")
     serve_p.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
     serve_p.add_argument("--port", type=int, default=int(os.getenv("PORT", "3000")))
@@ -215,6 +238,8 @@ def main(argv: list[str] | None = None) -> None:
         cmd_import_data(args)
     elif args.command == "advisor-seed":
         cmd_advisor_seed(args)
+    elif args.command == "advisor-faculty":
+        cmd_advisor_faculty(args)
     elif args.command == "advisor-serve":
         cmd_advisor_serve(args)
 

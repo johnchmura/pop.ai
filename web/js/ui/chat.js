@@ -11,6 +11,7 @@ const SUGGESTIONS = [
   'Can I take MATH 474 at the same time as CS 480?',
   'What can I take after CS 331?',
   'Does my schedule have any time conflicts?',
+  'Which professors do research in machine learning?',
 ];
 
 export function createChat({ els, known, getContext, offlineAnswer, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree }) {
@@ -78,8 +79,8 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
     try {
       const history = messages.filter((m) => m !== reply && !m.error).map(({ role, content }) => ({ role, content }));
       // no Claude API key on the server: answer from the app's own data, in the page
-      const answerOffline = () => { setMode('offline'); reply.content = offlineAnswer ? offlineAnswer(question) : 'The advisor is offline.'; };
-      if (mode === 'offline') { answerOffline(); return; }
+      const answerOffline = async () => { setMode('offline'); reply.content = offlineAnswer ? await offlineAnswer(question) : 'The advisor is offline.'; };
+      if (mode === 'offline') { await answerOffline(); return; }
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -88,7 +89,7 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
       });
       if (res.status === 503) {
         const j = await res.json().catch(() => ({}));
-        if (j.mode === 'offline') { answerOffline(); return; }
+        if (j.mode === 'offline') { await answerOffline(); return; }
         throw Object.assign(new Error(j.error || 'The advisor is not available.'), { safe: true });
       }
       if (!res.ok || !res.body) {

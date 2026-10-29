@@ -332,5 +332,76 @@ class NoSqliteExtensionTests(unittest.TestCase):
             conn.close()
 
 
+
+FACULTY = [
+    {"name": "Ada Lovelace", "profile_url": "https://www.iit.edu/directory/people/ada-lovelace", "titles": ["Associate Professor of Computer Science"],
+     "departments": ["Computer Science"], "profile_types": ["Faculty"], "email": "ada@illinoistech.edu",
+     "research_interests": ["Machine Learning", "Natural Language Processing"], "publications": ["Deep models for text (2024)"],
+     "google_scholar_url": "https://scholar.google.com/citations?user=x"},
+    {"name": "Grace Hopper", "profile_url": "https://www.iit.edu/directory/people/grace-hopper", "titles": ["Professor"],
+     "departments": ["Computer Science"], "email": "not-an-email", "research_interests": ["Compilers", "Programming Languages"],
+     "additional_sections": {"Areas of Expertise": ["Robotics"], "Professional Activities": ["Machine learning committee"]}},
+    {"name": "Marie Curie", "profile_url": "https://www.iit.edu/directory/people/marie-curie", "titles": ["Professor of Physics"],
+     "departments": ["Physics"], "email": "curie@illinoistech.edu", "research_interests": ["Radioactivity", "Learning sciences"]},
+    {"name": "", "profile_url": "https://www.iit.edu/directory/people/nobody"},
+    {"name": "Elsewhere", "profile_url": "https://evil.example.com/x"},
+]
+
+
+class FacultyTests(unittest.TestCase):
+    def setUp(self):
+        from app.advisor.faculty import FacultyIndex
+
+        self.index = FacultyIndex(FACULTY)
+
+    def test_records_are_cleaned(self):
+        names = [r["name"] for r in self.index.records]
+        self.assertEqual(names, ["Ada Lovelace", "Grace Hopper", "Marie Curie"])  # no name / not iit.edu dropped
+        grace = self.index.records[1]
+        self.assertEqual(grace["email"], "")  # not an email
+        self.assertIn("Robotics", grace["research_interests"])  # from "Areas of Expertise"
+        self.assertNotIn("Machine learning committee", grace["research_interests"])
+        self.assertEqual(grace["slug"], "grace-hopper")
+
+    def test_search_ranks_research_matches_first(self):
+        hits = self.index.search("machine learning")
+        self.assertEqual(hits[0]["name"], "Ada Lovelace")
+        self.assertEqual(hits[0]["matched"], ["Machine Learning"])
+        self.assertEqual([h["name"] for h in self.index.search("robots")], ["Grace Hopper"])  # plural matches
+        self.assertEqual(self.index.search("learning", dept="Physics")[0]["name"], "Marie Curie")
+        self.assertEqual(self.index.search("who does research"), [])  # only filler words
+        self.assertEqual(self.index.departments, ["Computer Science", "Physics"])
+
+    def test_chat_block_only_for_research_questions(self):
+        from app.advisor.faculty import faculty_block
+
+        self.assertEqual(faculty_block(self.index, "Can I take CS 331 next term?"), "")
+        block = faculty_block(self.index, "Which professors do research in machine learning?", "2026-10-29")
+        self.assertTrue(block.startswith("FACULTY MATCHES (IIT's online directory, read 2026-10-29"))
+        self.assertIn("1. Ada Lovelace", block)
+        self.assertIn("Email: ada@illinoistech.edu", block)
+        self.assertIn("Profile: https://www.iit.edu/directory/people/ada-lovelace", block)
+        none = faculty_block(self.index, "Who does research on underwater basket weaving?")
+        self.assertIn("no faculty matched", none)
+
+    def test_api_and_chat_use_faculty(self):
+        from fastapi.testclient import TestClient
+
+        import app.advisor.server as server
+        from app.advisor.faculty import FacultyIndex
+
+        with TestClient(server.app) as client, mock.patch.object(server.data, "faculty", FacultyIndex(FACULTY)):
+            r = client.get("/api/faculty", params={"q": "natural language", "limit": 5})
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json()["results"][0]["name"], "Ada Lovelace")
+            self.assertEqual(client.get("/api/faculty/departments").json()["departments"], ["Computer Science", "Physics"])
+            blocks = server.system_blocks("STUDENT CONTEXT", "Who should I do machine learning research with?")
+            self.assertEqual(len(blocks), 4)
+            self.assertIn("Ada Lovelace", blocks[3]["text"])
+            self.assertEqual(len(server.system_blocks("STUDENT CONTEXT", "When is CS 331 offered?")), 3)
+        with mock.patch.object(server.data, "faculty", None):
+            self.assertEqual(TestClient(server.app).get("/api/faculty", params={"q": "x"}).status_code, 503)
+
+
 if __name__ == "__main__":
     unittest.main()

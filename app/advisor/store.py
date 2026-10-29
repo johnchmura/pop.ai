@@ -8,6 +8,8 @@ The advisor adds one key-value table for what Pop does not have:
   forecast         the CS department's tentative future offerings
   programs         the checked degree programs (requirement groups)
   semester         the semester the schedule and plans use, for example "Spring 2027"
+  faculty          faculty from IIT's online directory (name, department, research interests, publications)
+  faculty_read_on  when the faculty data was read
 """
 
 from __future__ import annotations
@@ -78,6 +80,8 @@ def seed(conn: sqlite3.Connection, *, catalog: bool = True, sections: bool = Tru
     set_value(conn, "programs", programs)
     conn.commit()
     counts["programs"] = len(programs)
+    if (SEED_DIR / "faculty.json").exists():
+        counts["faculty"] = import_faculty(conn, _read("faculty.json"))
     if catalog:
         counts["catalog"] = upsert_catalog_courses(_read("catalog.json"), conn=conn)
     if sections:
@@ -89,6 +93,22 @@ def seed(conn: sqlite3.Connection, *, catalog: bool = True, sections: bool = Tru
             semester_id = upsert_semester(season, int(year), term_code=payload.get("term_code", ""), label=payload.get("semester_name"), conn=conn)
             counts[path.stem] = replace_semester_courses(semester_id, payload.get("courses") or [], conn=conn)
     return counts
+
+
+def import_faculty(conn: sqlite3.Connection, payload: Any) -> int:
+    """Store faculty records. Accepts the scraper's list, or {"read_on": ..., "faculty": [...]}."""
+    from app.advisor.faculty import clean_record
+
+    read_on = ""
+    records = payload
+    if isinstance(payload, dict):
+        read_on = str(payload.get("read_on") or "")
+        records = payload.get("faculty") or []
+    cleaned = [r for r in (clean_record(x) for x in records if isinstance(x, dict)) if r]
+    set_value(conn, "faculty", cleaned)
+    set_value(conn, "faculty_read_on", read_on)
+    conn.commit()
+    return len(cleaned)
 
 
 def is_seeded(conn: sqlite3.Connection) -> bool:

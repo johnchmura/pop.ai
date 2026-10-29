@@ -38,6 +38,7 @@ from app.advisor.catalog import (
     sections_json,
 )
 from app.advisor.claude import ClaudeError, call_claude, stream_claude
+from app.advisor.faculty import FacultyIndex, faculty_block
 from app.advisor.store import open_db, seed, is_seeded, get_value
 from app.db import ROOT
 
@@ -73,6 +74,8 @@ class Data:
 
     def __init__(self) -> None:
         self.files: dict[str, bytes] = {}
+        self.faculty: FacultyIndex | None = None
+        self.faculty_read_on = ""
         self.course_data = ""
         self.health: dict[str, Any] = {}
 
@@ -88,8 +91,16 @@ class Data:
             sections = sections_json(conn)
             forecast = forecast_json(conn)
             programs = programs_json(conn)
+            faculty = get_value(conn, "faculty", [])
+            if not faculty and (ROOT / "seed" / "faculty.json").exists():
+                from app.advisor.store import import_faculty
+
+                import_faculty(conn, json.loads((ROOT / "seed" / "faculty.json").read_text(encoding="utf-8")))
+                faculty = get_value(conn, "faculty", [])
+            self.faculty_read_on = get_value(conn, "faculty_read_on", "")
         finally:
             conn.close()
+        self.faculty = FacultyIndex(faculty) if faculty else None
         index = build_index(catalog, sections, forecast)
         self.course_data = course_data_text(index, programs["programs"])
         if len(self.course_data) > 700_000:
@@ -109,6 +120,7 @@ class Data:
             "sections": len(index["crnMap"]),
             "forecastTerms": [t["label"] for t in (forecast or {}).get("terms", [])],
             "programs": [p["id"] for p in programs["programs"]],
+            "faculty": len(self.faculty.records) if self.faculty else 0,
         }
 
 
@@ -240,12 +252,17 @@ def student_context(value: Any) -> str:
     return text[:200_000] or "STUDENT CONTEXT\n(none)"
 
 
-def system_blocks(context_text: str) -> list[dict[str, Any]]:
-    return [
+def system_blocks(context_text: str, question: str = "") -> list[dict[str, Any]]:
+    blocks = [
         {"type": "text", "text": instructions()},
         {"type": "text", "text": data.course_data, "cache_control": {"type": "ephemeral"}},
         {"type": "text", "text": context_text},
     ]
+    # research questions get the best-matching faculty from IIT's directory
+    faculty = faculty_block(data.faculty, question, data.faculty_read_on)
+    if faculty:
+        blocks.append({"type": "text", "text": faculty})
+    return blocks
 
 
 # ----- data and health
@@ -293,7 +310,8 @@ async def chat(request: Request):
         try:
             stop = None
             async for item in stream_claude(api_key=config.api_key, base_url=config.base_url, model=config.model,
-                                            max_tokens=config.max_tokens, system=system_blocks(context_text), messages=messages):
+                                            max_tokens=config.max_tokens, system=system_blocks(context_text, messages[-1]["content"]),
+                                            messages=messages):
                 if "text" in item:
                     yield send({"type": "text", "text": item["text"]})
                 else:
@@ -401,6 +419,22 @@ async def transcript(request: Request):
         warnings.append("The transcript was long and the list may be cut short. Check the last term.")
     majors = [m[:120] for m in (parsed.get("majors") or []) if isinstance(m, str)][:4]
     return JSONResponse({"courses": courses, "warnings": warnings, "majors": majors}, headers={"Cache-Control": "no-store"})
+
+
+# ----- faculty search
+
+
+@app.get("/api/faculty")
+def faculty_search(q: str = "", dept: str = "", limit: int = 10) -> JSONResponse:
+    if not data.faculty:
+        return error(503, "Faculty data is not loaded. See README: Faculty search.")
+    hits = data.faculty.search(q[:300], dept=dept[:120], limit=max(1, min(int(limit), 50)))
+    return JSONResponse({"results": hits, "readOn": data.faculty_read_on}, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/faculty/departments")
+def faculty_departments() -> JSONResponse:
+    return JSONResponse({"departments": data.faculty.departments if data.faculty else []})
 
 
 # ----- Pop's semantic search

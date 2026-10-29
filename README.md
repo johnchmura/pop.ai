@@ -10,7 +10,7 @@ Both apps read the same SQLite database (`data/pop.db`), filled by Pop's scraper
 
 | App | What it does | Start | Open |
 |---|---|---|---|
-| **advisor.** | Search, weekly schedule, prerequisite graph, degree audit from a transcript, semester plans with suggested courses, Claude chat advisor. Works on phones. | `python main.py advisor-serve` | http://localhost:3000 |
+| **advisor.** | Search, weekly schedule, prerequisite graph, degree audit from a transcript, semester plans with suggested courses, faculty search for research, Claude chat advisor. Works on phones. | `python main.py advisor-serve` | http://localhost:3000 |
 | **Pop search page** | The classic Pop page: one search box, a cart, and a schedule. Shift+Enter runs semantic search. | `./run.sh spring 2027` | http://localhost:8000/spring2027.html |
 
 ## Setup
@@ -48,6 +48,21 @@ python main.py advisor-serve        # http://localhost:3000
 
 Use `--port 3001` if port 3000 is busy. Without `ANTHROPIC_API_KEY`, the app still works and chat answers come from the app's own data. If the database is empty on the first start, the advisor loads `seed/` by itself.
 
+## Faculty search
+
+The advisor helps students find faculty whose research fits their interests:
+
+- **Search box:** a topic search ("robotics", "machine learning") shows **Faculty who research this**, with research areas, email, profile, and Google Scholar links.
+- **Chat:** questions about research, labs, or professors get the best-matching faculty added to Claude's context, so the advisor names real people with links, and the courses that prepare for their work.
+
+The data comes from IIT's online directory (iit.edu/directory/people), read the way Ishaan Goel's [iit-faculty-search](https://github.com/igoeldc/iit-faculty-search) scraper reads it. `seed/faculty.json` holds a copy. To refresh it, run that scraper, then:
+
+```bash
+python main.py advisor-faculty path/to/faculty.json --read-on 2026-10-29 --save-seed
+```
+
+Restart the advisor afterwards. Search is keyword-based (BM25, research interests and names count most) and needs no extra libraries.
+
 ## Run the Pop search page
 
 ```bash
@@ -77,7 +92,7 @@ The Pop page runs it with Shift+Enter. The advisor shows a **Search by meaning**
 | `app/api.py` | Semantic search API (embeddings). |
 | `app/advisor/` | The advisor's server (FastAPI): data from the database, Claude chat, plans, transcript reading. |
 | `web/` | The advisor's page and its logic (search, schedule, graph, audit, planner, suggestions). |
-| `seed/` | Seed data for the advisor. `advisor.json` sets the schedule semester (`"semester"`). |
+| `seed/` | Seed data for the advisor, including `faculty.json`. `advisor.json` sets the schedule semester (`"semester"`). |
 | `advisor_instructions.txt` | The advisor's system prompt. Edits apply without a restart. |
 | `src/`, `www/` | The Pop page. `python main.py build` joins `src/*.js` into `www/soda.js`. |
 | `main.py` | CLI: `build`, `serve`, `index`, `import-data`, `advisor-seed`, `advisor-serve`. |
@@ -86,8 +101,8 @@ The Pop page runs it with Shift+Enter. The advisor shows a **Search by meaning**
 ## How the advisor uses Pop's data
 
 - **Catalog and sections:** from Pop's tables (`catalog_courses`, `semesters`, `courses`). Prerequisite text is turned into AND/OR trees for the graph, the audit, and the planner.
-- **Advisor data:** one extra table, `advisor_data`, holds the degree programs, the CS forecast, department names, and hand-checked prerequisite fixes. A fix applies only while the catalog wording is the same, so new wording from the scraper wins.
-- **Claude:** the page sends the student's own context (transcript, saved sections, progress) with each question. The server adds the course list from the database and calls Claude. Routes: `GET /api/health`, `GET /data/*.json`, `POST /api/chat`, `POST /api/plan`, `POST /api/transcript`, `POST /api/search/semantic`.
+- **Advisor data:** one extra table, `advisor_data`, holds the degree programs, the CS forecast, department names, hand-checked prerequisite fixes, and the faculty list. A fix applies only while the catalog wording is the same, so new wording from the scraper wins.
+- **Claude:** the page sends the student's own context (transcript, saved sections, progress) with each question. The server adds the course list from the database, plus matching faculty for research questions, and calls Claude. Routes: `GET /api/health`, `GET /data/*.json`, `GET /api/faculty`, `POST /api/chat`, `POST /api/plan`, `POST /api/transcript`, `POST /api/search/semantic`.
 
 To change degree programs or the forecast, edit `seed/programs.json` or `seed/forecast.json`, then run `python main.py advisor-seed --keep-catalog --keep-sections`.
 

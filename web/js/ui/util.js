@@ -58,10 +58,15 @@ export function renderMarkdown(src, known) {
     let s = esc(text);
     const codes = [];
     s = s.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+    // links first, so emphasis and course-code links never change a web address
+    const links = [];
+    const keep = (html) => { links.push(html); return `\u0001${links.length - 1}\u0001`; };
+    const a = (url, label) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, url) => keep(a(url, label)));
+    s = s.replace(/https?:\/\/[^\s<)"']+[^\s<)"'.,;:!?]/g, (url) => keep(a(url, url)));
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
     s = s.replace(/(^|[\s(])_([^_\s][^_]*?)_(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
-    s = s.replace(/https?:\/\/[^\s<)"']+[^\s<)"'.,;:!?]/g, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
     s = s.replace(CODE_IN_TEXT, (m, offset, whole) => {
       // skip codes inside a link we just made
       const before = whole.slice(0, offset);
@@ -69,6 +74,7 @@ export function renderMarkdown(src, known) {
       const code = m.replace(/^([A-Z]+)\s?(\d{3})$/, '$1 $2');
       return known(code) ? `<button type="button" class="code-link" data-code="${code}">${m}</button>` : m;
     });
+    s = s.replace(/\u0001(\d+)\u0001/g, (_, i) => links[Number(i)]);
     s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[Number(i)]}</code>`);
     return s;
   };
