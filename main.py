@@ -10,7 +10,6 @@ import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from app.api import index_semester
 from app.db import (
     init_db,
     replace_semester_courses,
@@ -85,6 +84,9 @@ def cmd_serve(_args: argparse.Namespace) -> None:
 # --- index ---
 
 def cmd_index(args: argparse.Namespace) -> None:
+    # imported here: it loads sentence-transformers, which the other commands do not need
+    from app.api import index_semester
+
     index_semester(args.semester, args.year)
 
 
@@ -144,6 +146,23 @@ def cmd_import_data(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+# --- advisor ---
+
+def cmd_advisor_seed(args: argparse.Namespace) -> None:
+    from app.advisor.store import open_db, seed
+
+    conn = open_db()
+    counts = seed(conn, catalog=not args.keep_catalog, sections=not args.keep_sections)
+    conn.close()
+    print("Loaded seed/ into the database: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
+
+
+def cmd_advisor_serve(args: argparse.Namespace) -> None:
+    import uvicorn
+
+    uvicorn.run("app.advisor.server:app", host=args.host, port=args.port, reload=args.reload)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Pop.ai tooling")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -176,6 +195,15 @@ def main(argv: list[str] | None = None) -> None:
         help="Import every www/data/<season>_<year>.json found",
     )
 
+    seed_p = sub.add_parser("advisor-seed", help="Load the advisor's seed data (seed/) into SQLite")
+    seed_p.add_argument("--keep-catalog", action="store_true", help="Keep the catalog Pop scraped")
+    seed_p.add_argument("--keep-sections", action="store_true", help="Keep the sections Pop scraped")
+
+    serve_p = sub.add_parser("advisor-serve", help="Run the advisor web app")
+    serve_p.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
+    serve_p.add_argument("--port", type=int, default=int(os.getenv("PORT", "3000")))
+    serve_p.add_argument("--reload", action="store_true", help="Restart on code changes")
+
     args = parser.parse_args(argv)
     if args.command == "build":
         cmd_build(args)
@@ -185,6 +213,10 @@ def main(argv: list[str] | None = None) -> None:
         cmd_index(args)
     elif args.command == "import-data":
         cmd_import_data(args)
+    elif args.command == "advisor-seed":
+        cmd_advisor_seed(args)
+    elif args.command == "advisor-serve":
+        cmd_advisor_serve(args)
 
 
 if __name__ == "__main__":

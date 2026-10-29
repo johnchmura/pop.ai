@@ -1,0 +1,11 @@
+# What the advisor app needs (no machine-learning libraries).
+# Pop's semantic search also needs sentence-transformers (see requirements.txt); the advisor works without it.
+fastapi>=0.115.0
+uvicorn>=0.32.0
+httpx>=0.27.0
+pydantic>=2
+python-dotenv>=1.0.0
+sqlite-vec>=0.1.6
+# Pop's scrapers
+requests>=2.32
+beautifulsoup4>=4.12

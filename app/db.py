@@ -152,10 +152,27 @@ def get_db_path() -> Path:
     return Path(os.getenv("POP_DB_PATH", str(DEFAULT_DB_PATH)))
 
 
-def load_sqlite_vec(conn: sqlite3.Connection) -> None:
-    conn.enable_load_extension(True)
-    sqlite_vec.load(conn)
-    conn.enable_load_extension(False)
+def load_sqlite_vec(conn: sqlite3.Connection) -> bool:
+    """Load sqlite-vec. Some Python builds cannot load SQLite extensions; then only
+    semantic search is off, and everything else still works."""
+    try:
+        conn.enable_load_extension(True)
+        sqlite_vec.load(conn)
+        conn.enable_load_extension(False)
+        return True
+    except (AttributeError, sqlite3.OperationalError) as exc:
+        _warn_no_vec(exc)
+        return False
+
+
+_vec_warned = False
+
+
+def _warn_no_vec(exc: Exception) -> None:
+    global _vec_warned
+    if not _vec_warned:
+        _vec_warned = True
+        print(f"sqlite-vec is not available ({exc}); semantic search is off.")
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
@@ -173,7 +190,10 @@ def init_db(conn: sqlite3.Connection | None = None) -> sqlite3.Connection:
     owned = conn is None
     conn = conn or connect()
     conn.executescript(SCHEMA_SQL)
-    conn.execute(VEC_TABLE_SQL)
+    try:
+        conn.execute(VEC_TABLE_SQL)
+    except sqlite3.OperationalError as exc:  # sqlite-vec did not load
+        _warn_no_vec(exc)
     conn.commit()
     if owned:
         return conn

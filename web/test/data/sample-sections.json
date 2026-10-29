@@ -1,0 +1,1124 @@
+{
+  "semester_name": "Spring 2027",
+  "term_code": "202720",
+  "sample": true,
+  "note": "SAMPLE sections. CRNs, times, rooms, seats, and instructors are made up. Import real data from pop.ai (see README).",
+  "courses": [
+    {
+      "name": "CS 104",
+      "title": "Introduction to Computer Programming for Engineers",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10111",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 22,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "8:35 AM - 9:50 AM",
+                  "where": "Rettaliata Engr Center 104",
+                  "instructors": [
+                    "Omar Haddad"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 115",
+      "title": "Object-Oriented Programming I",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10121",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 12,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Perlstein Hall 131",
+                  "instructors": [
+                    "Grace Liu"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10122",
+              "schedule_type": "Lab",
+              "type": "Class",
+              "available": 6,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "F",
+                  "time": "10 AM - 11:40 AM",
+                  "where": "Stuart Building 006",
+                  "instructors": [
+                    "Grace Liu"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10123",
+              "schedule_type": "Lab",
+              "type": "Class",
+              "available": 0,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "F",
+                  "time": "1:50 PM - 3:30 PM",
+                  "where": "Stuart Building 006",
+                  "instructors": [
+                    "Grace Liu"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 116",
+      "title": "Object-Oriented Programming II",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10131",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 9,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Perlstein Hall 131",
+                  "instructors": [
+                    "Marcus Bell"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10132",
+              "schedule_type": "Lab",
+              "type": "Class",
+              "available": 9,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "W",
+                  "time": "3:15 PM - 4:55 PM",
+                  "where": "Stuart Building 006",
+                  "instructors": [
+                    "Marcus Bell"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 201",
+      "title": "Accelerated Introduction to Computer Science",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10141",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 15,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MWF",
+                  "time": "9 AM - 9:50 AM",
+                  "where": "Wishnick Hall 113",
+                  "instructors": [
+                    "Priya Raman"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10142",
+              "schedule_type": "Lab",
+              "type": "Class",
+              "available": 15,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "R",
+                  "time": "1:50 PM - 3:30 PM",
+                  "where": "Stuart Building 006",
+                  "instructors": [
+                    "Priya Raman"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 330",
+      "title": "Discrete Structures",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10151",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 20,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Stuart Building 113",
+                  "instructors": [
+                    "Elena Sokolova"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 331",
+      "title": "Data Structures and Algorithms",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10161",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 7,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Stuart Building 111",
+                  "instructors": [
+                    "Victor Chen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10162",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 25,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Stuart Building 111",
+                  "instructors": [
+                    "Victor Chen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ],
+          "Internet": [
+            {
+              "crn": "10163",
+              "schedule_type": "Lecture",
+              "type": "Internet",
+              "available": 30,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TBA",
+                  "time": "TBA",
+                  "where": "Internet",
+                  "instructors": [
+                    "Victor Chen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 340",
+      "title": "Programming Paradigms and Patterns",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10171",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 14,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Stuart Building 113",
+                  "instructors": [
+                    "Hannah Novak"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 350",
+      "title": "Computer Organization and Assembly Language Programming",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10181",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 11,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "8:35 AM - 9:50 AM",
+                  "where": "Rettaliata Engr Center 106",
+                  "instructors": [
+                    "Samuel Adeyemi"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 351",
+      "title": "Systems Programming",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10191",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 3,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Rettaliata Engr Center 106",
+                  "instructors": [
+                    "Samuel Adeyemi"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 422",
+      "title": "Data Mining",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10211",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 27,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "M",
+                  "time": "6:25 PM - 9:05 PM",
+                  "where": "Stuart Building 111",
+                  "instructors": [
+                    "Laura Jensen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 425",
+      "title": "Database Organization",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10221",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 13,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Siegel Hall 118",
+                  "instructors": [
+                    "Irene Park"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ],
+          "Internet": [
+            {
+              "crn": "10222",
+              "schedule_type": "Lecture",
+              "type": "Internet",
+              "available": 40,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TBA",
+                  "time": "TBA",
+                  "where": "Internet",
+                  "instructors": [
+                    "Irene Park"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 430",
+      "title": "Introduction to Algorithms",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10231",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 8,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Stuart Building 104",
+                  "instructors": [
+                    "Elena Sokolova"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 440",
+      "title": "Programming Languages and Translators",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10241",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 19,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Siegel Hall 118",
+                  "instructors": [
+                    "Hannah Novak"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 450",
+      "title": "Operating Systems",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10261",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 5,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Rettaliata Engr Center 104",
+                  "instructors": [
+                    "Samuel Adeyemi"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 458",
+      "title": "Introduction to Information Security",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10271",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 24,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "T",
+                  "time": "6:25 PM - 9:05 PM",
+                  "where": "Stuart Building 113",
+                  "instructors": [
+                    "Omar Haddad"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 480",
+      "title": "Introduction to Artificial Intelligence",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10281",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 2,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Perlstein Hall 131",
+                  "instructors": [
+                    "Laura Jensen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 481",
+      "title": "Artificial Intelligence Language Understanding",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10291",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 17,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Perlstein Hall 131",
+                  "instructors": [
+                    "Tomas Ortega"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 484",
+      "title": "Introduction to Machine Learning",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10301",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 0,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Wishnick Hall 113",
+                  "instructors": [
+                    "Laura Jensen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 487",
+      "title": "Software Engineering I",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10311",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 23,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "8:35 AM - 9:50 AM",
+                  "where": "Stuart Building 104",
+                  "instructors": [
+                    "Irene Park"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 110",
+      "title": "Computing Principles",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10112",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 26,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Rettaliata Engr Center 104",
+                  "instructors": [
+                    "Omar Haddad"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 415",
+      "title": "Introduction to Human-Computer Interaction",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10205",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 18,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Stuart Building 104",
+                  "instructors": [
+                    "Tomas Ortega"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 455",
+      "title": "Data Communications",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10265",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 22,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Stuart Building 111",
+                  "instructors": [
+                    "Samuel Adeyemi"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 485",
+      "title": "Computers and Society",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10305",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 15,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "W",
+                  "time": "6:25 PM - 9:05 PM",
+                  "where": "Stuart Building 104",
+                  "instructors": [
+                    "Dana Whitaker"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "10306",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 4,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Wishnick Hall 113",
+                  "instructors": [
+                    "Dana Whitaker"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CS 495",
+      "title": "Topics in Computer Science",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "10315",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 12,
+              "special_title": "Introduction to Deep Learning",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Perlstein Hall 131",
+                  "instructors": [
+                    "Laura Jensen"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 151",
+      "title": "Calculus I",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20101",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 30,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MWF",
+                  "time": "10 AM - 10:50 AM",
+                  "where": "Life Sciences 152",
+                  "instructors": [
+                    "Rosa Delgado"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "20102",
+              "schedule_type": "Recitation/Discussion",
+              "type": "Class",
+              "available": 30,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "T",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Life Sciences 152",
+                  "instructors": [
+                    "Rosa Delgado"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 152",
+      "title": "Calculus II",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20111",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 26,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MWF",
+                  "time": "1:50 PM - 2:40 PM",
+                  "where": "Life Sciences 152",
+                  "instructors": [
+                    "Kenji Mori"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "20112",
+              "schedule_type": "Recitation/Discussion",
+              "type": "Class",
+              "available": 26,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "R",
+                  "time": "10 AM - 11:15 AM",
+                  "where": "Life Sciences 152",
+                  "instructors": [
+                    "Kenji Mori"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 230",
+      "title": "Introduction to Discrete Math",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20121",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 12,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Rettaliata Engr Center 119",
+                  "instructors": [
+                    "Ana Petrova"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 251",
+      "title": "Multivariate and Vector Calculus",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20131",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 10,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MWF",
+                  "time": "10 AM - 10:50 AM",
+                  "where": "Rettaliata Engr Center 119",
+                  "instructors": [
+                    "Kenji Mori"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "20132",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 18,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Rettaliata Engr Center 119",
+                  "instructors": [
+                    "Ana Petrova"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 252",
+      "title": "Introduction to Differential Equations",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20141",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 22,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MWF",
+                  "time": "11:25 AM - 12:15 PM",
+                  "where": "Life Sciences 111",
+                  "instructors": [
+                    "Rosa Delgado"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 332",
+      "title": "Linear Algebra: Theory and Applications",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20151",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 15,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "8:35 AM - 9:50 AM",
+                  "where": "Life Sciences 111",
+                  "instructors": [
+                    "Ana Petrova"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 474",
+      "title": "Probability and Statistics",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20161",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 9,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "MW",
+                  "time": "11:25 AM - 12:40 PM",
+                  "where": "Rettaliata Engr Center 119",
+                  "instructors": [
+                    "Benjamin Hart"
+                  ],
+                  "dates": ""
+                }
+              ]
+            },
+            {
+              "crn": "20162",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 16,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "1:50 PM - 3:05 PM",
+                  "where": "Life Sciences 111",
+                  "instructors": [
+                    "Benjamin Hart"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "MATH 475",
+      "title": "Probability",
+      "sections": {
+        "Spring 2027": {
+          "Class": [
+            {
+              "crn": "20171",
+              "schedule_type": "Lecture",
+              "type": "Class",
+              "available": 20,
+              "special_title": "",
+              "meetings": [
+                {
+                  "days": "TR",
+                  "time": "3:15 PM - 4:30 PM",
+                  "where": "Life Sciences 111",
+                  "instructors": [
+                    "Benjamin Hart"
+                  ],
+                  "dates": ""
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

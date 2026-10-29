@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>advisor. — Course Advisor for Illinois Tech</title>
+  <meta name="description" content="Search Illinois Tech courses, see prerequisite graphs, build a weekly schedule, and ask an AI course advisor.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/theme-init.js"></script>
+</head>
+<body>
+  <div class="app">
+    <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize panels. Use the left and right arrow keys. Double-click to reset." aria-valuemin="28" aria-valuemax="72" aria-valuenow="54" title="Drag to resize. Double-click to reset."></div>
+    <!-- ================= LEFT: search ================= -->
+    <main class="left" id="left">
+      <button type="button" class="theme-toggle" id="settings-btn" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="settings-menu" id="settings-menu" role="dialog" aria-label="Settings" hidden></div>
+
+      <header class="brand">
+        <h1 class="logo"><a href="/" id="logo-link">advisor.</a></h1>
+        <p class="tagline"><span class="tagline-rule" aria-hidden="true"></span>A Course Advisor for Illinois Tech</p>
+      </header>
+
+      <div class="search-card">
+        <label for="search" class="sr-only">Search courses</label>
+        <span class="search-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
+        <input id="search" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Search courses — try CS 331, MATH 251, MATH 474" aria-describedby="search-help">
+      </div>
+      <p class="chat-hint">Or <button type="button" class="link-btn" id="hint-chat"><span class="tab-bot"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg></span>chat with the advisor</button></p>
+
+      <div class="toggles">
+        <button type="button" class="pill" id="options-btn" aria-expanded="false" aria-controls="options-panel">Options</button>
+        <button type="button" class="pill" id="filters-btn" aria-expanded="false" aria-controls="filters-panel">Filters<span class="pill-badge" id="filters-count" hidden></span></button>
+      </div>
+
+      <section class="panel" id="options-panel" hidden aria-label="Options">
+        <div class="panel-grid">
+          <fieldset>
+            <legend>Search in</legend>
+            <label><input type="checkbox" data-opt="searchDescriptions"> Course descriptions</label>
+            <label><input type="checkbox" data-opt="searchSections"> Section details (times, rooms, instructors)</label>
+          </fieldset>
+          <fieldset>
+            <legend>Result format</legend>
+            <label><input type="radio" name="detail" value="1" data-opt="detail"> Just title</label>
+            <label><input type="radio" name="detail" value="2" data-opt="detail"> Title and description</label>
+            <label><input type="radio" name="detail" value="3" data-opt="detail"> Everything</label>
+          </fieldset>
+          <fieldset>
+            <legend>Prerequisite graph</legend>
+            <label><input type="checkbox" data-opt="showDependents"> Show courses each course unlocks</label>
+            <label><input type="checkbox" data-opt="showBridge"> Show graduate bridge courses (CS 401–403)</label>
+            <label><input type="checkbox" data-opt="showExternal"> Show courses outside this catalog</label>
+          </fieldset>
+          <fieldset>
+            <legend>Other</legend>
+            <label><input type="checkbox" data-opt="showLinks"> Show catalog links</label>
+            <label><input type="checkbox" data-opt="collapseSections"> Collapse five or more sections</label>
+          </fieldset>
+        </div>
+      </section>
+
+      <section class="panel" id="filters-panel" hidden aria-label="Filters">
+        <div class="filter-block">
+          <label class="filter-title" for="completed-input">Courses I have completed</label>
+          <div class="chip-input" id="completed-box">
+            <div class="chips" id="completed-chips"></div>
+            <input id="completed-input" type="text" autocomplete="off" placeholder="Type a code and press Enter, e.g. CS 115">
+          </div>
+          <p class="hint" id="completed-hint">Used for “can I take it?” checks, the graph, and the chat advisor.</p>
+        </div>
+        <div class="filter-row">
+          <div class="filter-block">
+            <span class="filter-title">Department</span>
+            <div class="seg" id="f-subject"></div>
+          </div>
+          <div class="filter-block">
+            <span class="filter-title">Level</span>
+            <div class="seg" id="f-level"></div>
+          </div>
+          <div class="filter-block">
+            <span class="filter-title">Meets only on</span>
+            <div class="seg" id="f-days"></div>
+          </div>
+        </div>
+        <div class="filter-row">
+          <label><input type="checkbox" id="f-offered"> Offered this semester</label>
+          <label><input type="checkbox" id="f-open"> Has open seats</label>
+          <label><input type="checkbox" id="f-eligible"> Only courses I can take now</label>
+          <button type="button" class="link-btn" id="f-reset">Reset filters</button>
+        </div>
+      </section>
+
+      <div id="content" aria-live="polite">
+        <div id="default-content">
+          <p class="intro">Search any course. Save sections to build your <strong id="intro-semester">Spring 2027</strong> schedule.</p>
+          <p class="data-note" id="data-note" hidden></p>
+          <h2 class="eyebrow" id="search-help">You can search by:</h2>
+          <ol class="examples" id="examples"></ol>
+        </div>
+        <div id="results" hidden></div>
+      </div>
+
+      <footer class="left-footer">
+        <p>Optimized for Chrome and Safari, etc.... <span class="credit">Search and schedule ideas come from
+          <a href="https://github.com/johnchmura/pop.ai" target="_blank" rel="noopener noreferrer">Pop</a>
+          (based on Evan Wallace’s Soda). Not an official Illinois Tech service — confirm plans with your academic advisor.</span></p>
+      </footer>
+    </main>
+
+    <!-- ================= RIGHT: tabs ================= -->
+    <aside class="right" id="right">
+      <div class="tabs" role="tablist" aria-label="Views">
+        <button type="button" class="mtab" id="mtab-search" aria-label="Search courses"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Search</button>
+        <button type="button" role="tab" class="tab" id="tab-degree" aria-controls="view-degree" data-tab="degree">Degree</button>
+        <button type="button" role="tab" class="tab" id="tab-schedule" aria-controls="view-schedule" data-tab="schedule">Schedule</button>
+        <button type="button" role="tab" class="tab" id="tab-chat" aria-controls="view-chat" data-tab="chat"><span class="tab-bot"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg></span>Chat</button>
+        <button type="button" role="tab" class="tab" id="tab-graph" aria-controls="view-graph" data-tab="graph"><span class="tl-long">Prerequisite Graph</span><span class="tl-short">Graph</span></button>
+      </div>
+
+      <!-- Schedule -->
+      <section class="view" id="view-schedule" role="tabpanel" aria-labelledby="tab-schedule">
+        <div class="card register-card">
+          <span>Ready to register? <a href="https://wildfly-prd.iit.edu/coursestatusreport/" target="_blank" rel="noopener noreferrer" id="check-full">Check if these sections are full</a></span>
+          <a class="ext" href="https://wildfly-prd.iit.edu/coursestatusreport/" target="_blank" rel="noopener noreferrer" aria-label="Open the IIT Course Status Report in a new tab">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+          </a>
+        </div>
+
+        <div class="card saved-card">
+          <div class="card-head">
+            <h2 class="card-title">Saved Courses</h2>
+            <span class="muted small" id="saved-summary"></span>
+          </div>
+          <div id="saved-list"></div>
+        </div>
+
+        <h2 class="schedule-title" id="schedule-title">Spring 2027 Schedule</h2>
+        <div class="grid-wrap"><div class="sched" id="schedule-grid"></div></div>
+        <div id="unscheduled"></div>
+      </section>
+
+      <!-- Chat -->
+      <section class="view view-chat" id="view-chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
+        <div class="card chat-head">
+          <span class="bot-avatar lg" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg>
+          </span>
+          <div class="chat-head-text">
+            <h2 class="card-title">Course Advisor</h2>
+          </div>
+          <span class="mode-badge" id="mode-badge" title=""></span>
+          <button type="button" class="icon-btn" id="chat-clear" aria-label="Clear chat" title="Clear chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/></svg>
+          </button>
+        </div>
+        <div class="card chat-log" id="chat-log" aria-live="polite"></div>
+        <form class="chat-form" id="chat-form">
+          <label for="chat-input" class="sr-only">Message</label>
+          <textarea id="chat-input" rows="1" placeholder="Type a message..." maxlength="12000"></textarea>
+          <button type="submit" class="send-btn" id="chat-send" aria-label="Send">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"/></svg>
+          </button>
+        </form>
+      </section>
+
+      <!-- Course graph -->
+      <section class="view" id="view-graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
+        <div class="card graph-card">
+          <div class="graph-filter">
+            <label for="graph-add">Filter by course</label>
+            <input id="graph-add" list="graph-courses" type="text" autocomplete="off" spellcheck="false" placeholder="Pick or type a course">
+            <datalist id="graph-courses"></datalist>
+            <button type="button" class="link-btn" id="graph-clear" hidden>Show all</button>
+          </div>
+          <div class="graph-focus" id="graph-focus"></div>
+          <div class="graph-scroll" id="graph-scroll"></div>
+          <div class="legend" aria-label="Legend">
+            <span><i class="lg-line"></i>Prerequisite</span>
+            <span><i class="lg-line co"></i>Corequisite</span>
+            <span><i class="lg-line alt"></i>One of several options</span>
+          </div>
+        </div>
+        <div class="card graph-detail" id="graph-detail" hidden></div>
+      </section>
+      <!-- Degree progress -->
+      <section class="view" id="view-degree" role="tabpanel" aria-labelledby="tab-degree" hidden>
+        <div class="card" id="degree-intro">
+          <h2 class="card-title">Degree Progress</h2>
+          <p class="muted">Upload your transcript to see what is left and get a plan.</p>
+        </div>
+        <div class="card upload-card">
+          <div class="upload-summary">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/></svg>
+            <span class="us-text"><strong>Transcript loaded</strong><span id="upload-summary-text" class="muted small"></span></span>
+            <button type="button" class="btn" id="replace-transcript">Upload a new one</button>
+            <button type="button" class="link-btn" id="clear-transcript-2">Clear</button>
+          </div>
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload your unofficial transcript">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <strong>Drop your unofficial transcript here</strong>
+            <span class="muted small">PDF from MyIIT / Banner, a saved web page (.html), text, or a screenshot</span>
+          </div>
+          <input type="file" id="transcript-file" accept=".pdf,.html,.htm,.txt,.png,.jpg,.jpeg,.webp,.gif,application/pdf,text/html,text/plain,image/*" hidden>
+          <div class="upload-actions">
+            <button type="button" class="btn" id="pick-file">Choose file</button>
+            <button type="button" class="btn" id="paste-toggle">Paste text</button>
+            <button type="button" class="btn" id="try-sample">Try a sample</button>
+            <button type="button" class="link-btn" id="clear-transcript">Clear transcript</button>
+          </div>
+          <div id="paste-box" hidden>
+            <label for="paste-text" class="sr-only">Transcript text</label>
+            <textarea id="paste-text" rows="6" placeholder="Open your unofficial transcript, select all (Ctrl/Cmd + A), copy, and paste it here."></textarea>
+            <button type="button" class="btn" id="paste-go">Read text</button>
+          </div>
+          <div class="upload-status" id="upload-status" aria-live="polite"></div>
+          <p class="hint">Your transcript is read and saved only in this browser. If you press “Read with Claude”, the file is sent to the Claude API to read it and is not stored.</p>
+        </div>
+        <div id="degree-body"></div>
+      </section>
+    </aside>
+  </div>
+
+  <button type="button" class="chat-fab" id="chat-fab" aria-label="Open the course advisor chat">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.2A8 8 0 1 1 20 11.5Z"/></svg>
+  </button>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

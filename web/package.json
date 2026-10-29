@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "The advisor page. Run its logic tests with: node --test web/test/"
+}
