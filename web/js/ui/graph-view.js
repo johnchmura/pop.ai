@@ -128,7 +128,7 @@ export function renderDetail({ index, code, completed, planned, els, addButton =
       ${addButton(code)}
       <button type="button" class="btn" data-search="${esc(code)}">Search ${esc(code)}</button>
       <button type="button" class="btn" data-ask="${esc(code)}">Ask advisor</button>
-      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '✓ Completed' : 'Mark completed'}</button>
+      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '✓ Taken' : 'I took this'}</button>
     </div>`;
 }
 

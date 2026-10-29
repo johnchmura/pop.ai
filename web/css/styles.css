@@ -325,13 +325,6 @@ svg { display: block; }
   font-size: 14px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
   color: var(--muted); margin: 44px 0 18px;
 }
-.examples { list-style: none; margin: 0; padding: 0; counter-reset: ex; }
-.examples li { border-bottom: 1px solid var(--rule); }
-.examples button {
-  display: flex; align-items: baseline; gap: 18px; width: 100%; text-align: left;
-  border: 0; background: none; padding: 18px 0; font-size: 18px; color: var(--text);
-}
-.examples button:hover .ex-label { text-decoration: underline; text-underline-offset: 3px; }
 .ex-num { font-size: 14px; color: var(--faint); font-weight: 600; width: 22px; font-variant-numeric: tabular-nums; }
 .ex-label { font-weight: 700; color: var(--ink); }
 .ex-sample { color: var(--text); }
@@ -803,7 +796,6 @@ button.req-chip { cursor: pointer; }
   .right { padding: 24px 16px 96px; }
   .search-card { margin: 8px -6px 0; padding: 10px; }
   #search { padding: 14px 16px; font-size: 16px; }
-  .examples button { font-size: 16px; gap: 12px; padding: 14px 0; }
   .tab { font-size: 13px; padding: 14px 2px; }
   .big-stats { grid-template-columns: repeat(2, 1fr); }
   .card-head { flex-wrap: wrap; }
@@ -950,7 +942,6 @@ button.req-chip { cursor: pointer; }
 :root[data-theme="dark"] .intro { color: var(--muted); }
 .data-note { font-size: 12px; margin: 16px 0 0; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .04em; margin: 70px 0 20px; color: var(--muted); }
-.examples button { padding: 14px 0; font-size: 14px; gap: 14px; align-items: center; line-height: 17px; }
 .ex-num { font-size: 11px; width: 18px; }
 .left-footer { margin-top: 56px; padding-top: 18px; font-size: 11px; line-height: 1.5; }
 .left-footer .credit { display: none; }
@@ -1060,7 +1051,6 @@ button.req-chip { cursor: pointer; }
 .tagline { margin-top: 1px; }
 .toggles { margin: 21px 14px 0 0; }
 .pill { padding: 0 18px; }
-.examples button { padding: 13.5px 0; }
 .chat-log { height: clamp(380px, calc(100vh - 352px), 900px); }
 #view-graph > .card:first-child { padding: 12px 16px; }
 .graph-card { min-height: 477px; }
@@ -1241,3 +1231,46 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 
 /* a typed course code that is not offered this semester */
 .search-note { margin: 0 0 12px; }
+
+/* ---------- streamlined UI (one clear control per job, fewer words) ---------- */
+/* search: a few example chips instead of a list to read */
+.examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 28px 0 0; counter-reset: none; }
+.examples .ex-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-right: 2px; }
+.ex-chip { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--pill-border); background: var(--pill-bg); color: var(--text); cursor: pointer; }
+.ex-chip:hover { border-color: var(--focus); color: var(--focus); }
+.toggles { justify-content: flex-start; margin: 16px 0 0; }
+#f-subject { height: 36px; max-width: 100%; padding: 0 10px; border: 1px solid var(--input-border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: 13px; }
+.left-footer { margin-top: 40px; }
+.left-footer p { font-size: 11px; color: var(--faint); }
+.course-actions { align-items: center; }
+.course-actions .link-btn { margin-left: auto; font-size: 13px; }
+
+/* right side: three tabs; chat is the "Advisor" tab, so no floating button */
+.chat-fab, .chat-fab.hide { display: none !important; }
+.chat-head { display: flex; justify-content: flex-end; align-items: center; gap: 10px; min-height: 0; padding: 0; margin: 0 0 10px; background: none; border: 0; box-shadow: none; }
+.mode-badge:empty { display: none; }
+.head-link { margin-left: auto; font-size: 13px; color: var(--focus); text-decoration: none; }
+.head-link:hover { text-decoration: underline; }
+
+/* graph: opened from a course, with a way back */
+.graph-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+.graph-opt { display: flex; align-items: center; gap: 8px; color: var(--muted); cursor: pointer; }
+
+/* degree: one upload card */
+.upload-actions { gap: 14px; }
+.upload-actions .link-btn { margin-left: 0; }
+.upload-actions #clear-transcript { margin-left: auto; }
+.manual summary { cursor: pointer; font-size: 13px; color: var(--focus); }
+.manual[open] summary { margin-bottom: 10px; }
+.upload-card.compact .manual { display: none; }
+.program-inline select { appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0 18px 0 0; margin: 0 0 4px; font: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: right 6px top 55%, right 2px top 55%; background-size: 4px 4px; background-repeat: no-repeat; max-width: 100%; }
+.program-inline select:hover, .program-inline select:focus-visible { color: var(--focus); }
+.notes-card summary { cursor: pointer; }
+.notes-card[open] summary { margin-bottom: 8px; }
+.examples .ex-chip { display: inline-flex; width: auto; padding: 6px 12px; gap: 0; border-bottom: 1px solid var(--pill-border); font-size: 13px; line-height: 1.2; }
+.examples .ex-chip:hover { border-color: var(--focus); }
+.program-inline { display: inline-block; }
+.program-inline select { width: auto; height: auto; }
+.filter-row .filter-block:has(#f-subject) { flex: 1 1 220px; min-width: 0; }
+#f-subject { width: 100%; max-width: 340px; }

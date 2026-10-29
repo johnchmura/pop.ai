@@ -5,13 +5,11 @@ import { parseProposals } from '../core/changes.js';
 import { parseMemory } from '../core/commitments.js';
 
 const BOT_ICON = '<span class="bot-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg></span>';
-const GREETING = 'Hi there! 👋 I’m your course advisor. How can I help you today?';
+const GREETING = 'Ask about courses, your plan, or research. 👋';
 const SUGGESTIONS = [
-  'What are the prerequisites for CS 481?',
-  'Can I take MATH 474 at the same time as CS 480?',
   'What can I take after CS 331?',
-  'Does my schedule have any time conflicts?',
-  'Which professors do research in machine learning?',
+  'Does my schedule have time conflicts?',
+  'Who does machine learning research?',
 ];
 
 export function createChat({ els, known, getContext, offlineAnswer, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree }) {
@@ -145,7 +143,7 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
   function setMode(m, model) {
     mode = m;
     if (m === 'claude') {
-      els.mode.textContent = 'Claude';
+      els.mode.textContent = ''; // working normally: no badge to read
       els.mode.className = 'mode-badge ok';
       els.mode.title = `Answers from ${model || 'Claude'}`;
     } else {

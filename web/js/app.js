@@ -67,9 +67,7 @@ const els = {
   defaults: $('#default-content'),
   examples: $('#examples'),
   dataNote: $('#data-note'),
-  optionsBtn: $('#options-btn'),
   filtersBtn: $('#filters-btn'),
-  optionsPanel: $('#options-panel'),
   filtersPanel: $('#filters-panel'),
   filtersCount: $('#filters-count'),
   completedChips: $('#completed-chips'),
@@ -249,13 +247,12 @@ function courseCard(course) {
   if (detail === 2) return `${html}${course.sections.length ? `<div class="compact-add">${addCourseButton(course.code)}</div>` : ''}</article>`;
 
   html += `<p class="meta-line"><b>Prerequisites:</b> ${course.prereqText ? linkCodes(course.prereqText, known) : 'None'}</p>`;
+  const graphLink = `<button type="button" class="link-btn" data-graph="${esc(course.code)}">${course.dependents.length ? `Unlocks ${course.dependents.length} course${course.dependents.length === 1 ? '' : 's'}` : 'Prerequisite graph'} →</button>`;
   if (course.note) html += `<p class="meta-line">${esc(course.note)}</p>`;
   if (course.futureTerms) {
-    html += `<p class="meta-line"><b>Future terms:</b> ${course.futureTerms.length ? course.futureTerms.map((t) => hl(t)).join(', ') : 'Not on the department’s forecast'} <span class="tent">(tentative${course.forecastNote ? ` · ${esc(course.forecastNote)}` : ''})</span></p>`;
+    if (course.futureTerms.length) html += `<p class="meta-line"><b>Also offered:</b> ${course.futureTerms.filter((t) => t !== state.index.semester).map((t) => hl(t)).join(', ') || 'None planned'} <span class="tent">(tentative)</span></p>`;
   }
-  if (course.dependents.length) {
-    html += `<p class="meta-line"><b>Unlocks:</b> ${course.dependents.map((d, i, a) => `<span class="nw"><button type="button" class="code-link" data-code="${esc(d.code)}">${esc(d.code)}</button>${i < a.length - 1 ? ',' : ''}</span>`).join(' ')}</p>`;
-  }
+  html += `<p class="meta-line">${graphLink}</p>`;
 
   if (course.sections.length) {
     const many = state.options.collapseSections && course.sections.length >= 5 && !state.expanded.has(course.code);
@@ -269,11 +266,9 @@ function courseCard(course) {
   const done = state.completed.includes(course.code);
   const onTranscript = transcriptSets().completed.has(course.code);
   html += `<div class="course-actions">
-      <button type="button" class="btn" data-graph="${esc(course.code)}">Show graph</button>
       <button type="button" class="btn" data-ask="${esc(course.code)}">Ask advisor</button>
-      ${onTranscript ? '<span class="btn on" aria-disabled="true">✓ On your transcript</span>'
-        : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '✓ Completed' : 'Mark completed'}</button>`}
-      ${state.options.showLinks && !course.stub ? `<a class="btn" href="${catalogUrl(course.code)}" target="_blank" rel="noopener noreferrer" title="Open the ${esc(course.subject)} page of the IIT catalog">Catalog ↗</a>` : ''}
+      ${onTranscript ? '' : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '✓ Taken' : 'I took this'}</button>`}
+      ${!course.stub ? `<a class="link-btn" href="${catalogUrl(course.code)}" target="_blank" rel="noopener noreferrer">Catalog ↗</a>` : ''}
     </div>`;
   return `${html}</article>`;
 }
@@ -324,14 +319,13 @@ function renderResults() {
   // search lists only courses with sections this semester; say so when a typed code is not offered
   const notOffered = state.focus.filter((c) => !state.index.courses.get(c)?.sections.length);
   const offNote = notOffered.length
-    ? `<p class="search-note small muted">Not offered in ${esc(state.index.semester)}: ${notOffered.map(esc).join(', ')}. Search lists only courses with sections to add. Ask the advisor for the next offering.</p>`
+    ? `<p class="search-note small muted">Not offered in ${esc(state.index.semester)}: ${notOffered.map(esc).join(', ')}. Ask the advisor for the next offering.</p>`
     : '';
   if (!total) {
     els.results.innerHTML = `<div class="results-head"><span>No results</span></div>
       ${offNote}
       ${semanticButton(q)}
-      <p class="empty">No courses offered in ${esc(state.index.semester)} matched “${esc(q)}”${filters ? ` with ${filters} filter${filters === 1 ? '' : 's'} on. <button type="button" class="link-btn" data-reset-filters>Clear filters</button>` : '.'}
-      Try a course code like <button type="button" class="code-link" data-code="CS 331">CS 331</button> or a word like “graphics”.</p>`;
+      ${offNote ? '' : `<p class="empty">No ${esc(state.index.semester)} courses matched “${esc(q)}”.${filters ? ` <button type="button" class="link-btn" data-reset-filters>Clear filters</button>` : ''}</p>`}`;
     return;
   }
   const shown = state.results.slice(0, state.shown);
@@ -395,9 +389,7 @@ function renderCompletedChips() {
   const t = transcriptSets();
   const hint = $('#completed-hint');
   if (hint) {
-    hint.textContent = state.transcript
-      ? `Plus ${t.completed.size} completed and ${t.inProgress.size} in-progress courses from your transcript (Degree tab).`
-      : 'Used for “can I take it?” checks, the graph, and the chat advisor. Or upload your transcript on the Degree tab.';
+    hint.textContent = state.transcript ? `Plus ${t.completed.size} completed and ${t.inProgress.size} in-progress from your transcript.` : '';
   }
 }
 
@@ -537,10 +529,12 @@ function applyMemory(ops) {
 
 // ---------- tabs ----------
 let scheduleLayout = null;
+let tabBeforeGraph = 'degree';
 function setTab(tab) {
   if (!['schedule', 'chat', 'graph', 'degree'].includes(tab)) tab = 'degree';
+  if (tab === 'graph' && state.tab !== 'graph') tabBeforeGraph = state.tab;
   state.tab = tab;
-  store.set('tab', tab);
+  if (tab !== 'graph') store.set('tab', tab); // the graph is a view of a course, not a home tab
   for (const t of $$('.tab')) {
     const on = t.dataset.tab === tab;
     t.setAttribute('aria-selected', String(on));
@@ -597,17 +591,15 @@ function wire() {
   });
   $('#logo-link').addEventListener('click', (e) => { e.preventDefault(); setQuery(''); });
 
-  // options / filters panels
-  const togglePanel = (btn, panel, other, otherBtn) => {
-    const open = panel.hidden;
-    panel.hidden = !open;
-    btn.setAttribute('aria-expanded', String(open));
-    if (open) { other.hidden = true; otherBtn.setAttribute('aria-expanded', 'false'); }
-  };
-  els.optionsBtn.addEventListener('click', () => togglePanel(els.optionsBtn, els.optionsPanel, els.filtersPanel, els.filtersBtn));
-  els.filtersBtn.addEventListener('click', () => togglePanel(els.filtersBtn, els.filtersPanel, els.optionsPanel, els.optionsBtn));
+  // filters panel
+  els.filtersBtn.addEventListener('click', () => {
+    const open = els.filtersPanel.hidden;
+    els.filtersPanel.hidden = !open;
+    els.filtersBtn.setAttribute('aria-expanded', String(open));
+  });
 
-  for (const input of $$('[data-opt]', els.optionsPanel)) {
+  // the few options left on screen (the graph's "unlocks" switch); the rest keep their defaults
+  for (const input of $$('[data-opt]')) {
     const key = input.dataset.opt;
     if (input.type === 'radio') input.checked = Number(input.value) === Number(state.options[key]);
     else input.checked = !!state.options[key];
@@ -621,7 +613,7 @@ function wire() {
 
   // filter chips
   const subjects = [...new Set(state.index.list.map((c) => c.subject))];
-  const levels = [...new Set(state.index.list.map((c) => c.level))].sort();
+  const levels = [...new Set(state.index.list.filter((c) => c.sections.length && c.level >= 100).map((c) => c.level))].sort();
   const seg = (el, values, key, label) => {
     el.innerHTML = values.map((v) => `<button type="button" data-val="${esc(v)}" aria-pressed="${state.filters[key].includes(v)}">${esc(label(v))}</button>`).join('');
     el.addEventListener('click', (e) => {
@@ -635,7 +627,11 @@ function wire() {
       filtersChanged();
     });
   };
-  seg($('#f-subject'), subjects, 'subjects', (s) => s);
+  const subjectSelect = $('#f-subject');
+  const deptName = new Map(state.index.list.map((c) => [c.subject, c.department]));
+  subjectSelect.innerHTML += subjects.sort().map((v) => `<option value="${esc(v)}">${esc(v)}${deptName.get(v) && deptName.get(v) !== v ? ` · ${esc(deptName.get(v))}` : ''}</option>`).join('');
+  subjectSelect.value = state.filters.subjects[0] || '';
+  subjectSelect.addEventListener('change', () => { state.filters.subjects = subjectSelect.value ? [subjectSelect.value] : []; filtersChanged(); });
   seg($('#f-level'), levels, 'levels', (l) => `${l}s`);
   seg($('#f-days'), ['M', 'T', 'W', 'R', 'F'], 'days', (d) => d);
   for (const [id, key] of [['f-open', 'open'], ['f-eligible', 'eligible']]) {
@@ -761,6 +757,7 @@ function filtersChanged() {
 function resetFilters() {
   state.filters = { ...DEFAULT_FILTERS, subjects: [], levels: [], days: [] };
   for (const b of $$('.seg button', els.filtersPanel)) b.setAttribute('aria-pressed', 'false');
+  $('#f-subject').value = '';
   for (const id of ['f-open', 'f-eligible']) $(`#${id}`).checked = false;
   filtersChanged();
 }
@@ -772,27 +769,12 @@ function readHash() {
 }
 
 function renderExamples() {
+  // a few tries show what search understands (codes, topics, days, professors); no list to read
   const idx = state.index;
   const firstSection = idx.list.flatMap((c) => c.sections)[0];
-  const crn = idx.crnMap.has('10161') ? '10161' : firstSection?.crn || '10161';
-  const room = firstSection?.meetings[0]?.where?.split(' ')[0]?.toLowerCase() || 'stuart';
-  const prof = firstSection?.meetings[0]?.instructors[0]?.split(' ').pop()?.toLowerCase() || 'staff';
-  const examples = [
-    ['CRNs', crn],
-    ['Places', room === 'internet' ? 'stuart' : room],
-    ['Professors', prof],
-    ['Semesters', idx.semester.toLowerCase()],
-    ['Departments', 'math'],
-    ['Course titles', 'computer graphics'],
-    ['Days of the week', 'mwf'],
-    ['Course descriptions', 'compiler design'],
-    ['Course abbreviations', 'cs 440'],
-    ['Combinations of the above', 'hist comp mwf'],
-  ];
-  els.examples.innerHTML = examples.map(([label, ex], i) => `<li><button type="button" data-search="${esc(ex)}">
-      <span class="ex-num">${String(i + 1).padStart(2, '0')}</span>
-      <span><span class="ex-label">${esc(label)}</span> <span class="ex-sample">- e.g. ${esc(ex)}</span></span>
-    </button></li>`).join('');
+  const prof = firstSection?.meetings[0]?.instructors[0]?.split(' ').pop() || '';
+  const tries = ['CS 331', 'machine learning', 'math mwf', prof].filter(Boolean);
+  els.examples.innerHTML = `<span class="ex-label">Try</span>${tries.map((t) => `<button type="button" class="ex-chip" data-search="${esc(t)}">${esc(t)}</button>`).join('')}`;
 }
 
 // ---------- chat ----------
@@ -824,11 +806,10 @@ async function start() {
   state.saved = state.saved.filter((crn) => idx.crnMap.has(String(crn))).map(String);
   store.set('saved', state.saved);
 
-  $('#intro-semester').textContent = idx.semester;
-  $('#schedule-title').textContent = `${idx.semester} Schedule`;
+  $('#schedule-title').textContent = idx.semester;
   if (idx.sample) {
     els.dataNote.hidden = false;
-    els.dataNote.textContent = `Course and prerequisite data come from the Illinois Tech catalog. The ${idx.semester} sections (CRNs, times, rooms, instructors, seats) are sample data for this demo.`;
+    els.dataNote.textContent = `${idx.semester} sections are sample data.`;
   }
   const foot = document.createElement('p');
   foot.className = 'saved-foot';
@@ -916,11 +897,11 @@ async function start() {
     if (known(code) && !state.graphFilter.includes(code)) { state.graphSelected = null; setGraphFilter([...state.graphFilter, code]); }
   });
   $('#graph-clear').addEventListener('click', () => setGraphFilter([]));
+  $('#graph-back').addEventListener('click', () => setTab(tabBeforeGraph));
   $('#graph-focus').addEventListener('click', (e) => {
     const r = e.target.closest('[data-unfilter]');
     if (r) setGraphFilter(state.graphFilter.filter((c) => c !== r.dataset.unfilter));
   });
-  $('#hint-chat').addEventListener('click', () => setTab('chat'));
   // phone layout: one pane at a time, switched by the bottom bar
   const appEl = document.querySelector('.app');
   const phone = window.matchMedia('(max-width: 960px)');
