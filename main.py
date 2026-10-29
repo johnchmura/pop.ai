@@ -175,6 +175,12 @@ def cmd_advisor_faculty(args: argparse.Namespace) -> None:
     print(f"Loaded {count} faculty into the database. Restart the advisor to use them.")
 
 
+def cmd_advisor_refresh(args: argparse.Namespace) -> None:
+    from app.advisor.refresh import run
+
+    sys.exit(run(sections=not args.no_sections, faculty=args.faculty, push=args.push))
+
+
 def cmd_advisor_serve(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -222,6 +228,11 @@ def main(argv: list[str] | None = None) -> None:
     fac_p.add_argument("--read-on", default="", help="When the directory was read, for example 2026-10-29")
     fac_p.add_argument("--save-seed", action="store_true", help="Also write seed/faculty.json")
 
+    ref_p = sub.add_parser("advisor-refresh", help="Scrape IIT's sections and faculty into seed/ (Render's cron job)")
+    ref_p.add_argument("--no-sections", action="store_true", help="Skip the Course Status Report")
+    ref_p.add_argument("--faculty", choices=["auto", "yes", "no"], default="auto", help="auto: only when seed/faculty.json is a week old")
+    ref_p.add_argument("--push", action="store_true", help="Commit changed seed files to GitHub (needs GITHUB_TOKEN)")
+
     serve_p = sub.add_parser("advisor-serve", help="Run the advisor web app")
     serve_p.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
     serve_p.add_argument("--port", type=int, default=int(os.getenv("PORT", "3000")))
@@ -240,6 +251,8 @@ def main(argv: list[str] | None = None) -> None:
         cmd_advisor_seed(args)
     elif args.command == "advisor-faculty":
         cmd_advisor_faculty(args)
+    elif args.command == "advisor-refresh":
+        cmd_advisor_refresh(args)
     elif args.command == "advisor-serve":
         cmd_advisor_serve(args)
 

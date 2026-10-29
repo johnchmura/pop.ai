@@ -300,16 +300,9 @@ async function semanticSearch(q) {
   }
 }
 
-// ---------- faculty who research the searched topic (IIT's online directory) ----------
+// ---------- faculty (IIT's online directory): used by offline chat answers; online, the server adds them ----------
 const facultyCache = new Map(); // query -> results
-let facultyTimer = 0;
 const RESEARCH_Q = /\b(research|researchers?|professors?|faculty|labs?|laborator(y|ies)|mentors?|ph\.?d|thesis|publications?|work with|works on|who (works|studies|does|teaches)|reach out|undergraduate research|scholar)\b/i;
-/** Topic searches ("robotics", "machine learning") get faculty; course codes and CRNs do not. */
-function facultyQuery(q) {
-  if (!state.health?.faculty || !/[a-z]{3,}/i.test(q)) return '';
-  if (/^[\s,]*([A-Za-z]{2,4}\s*\d{3}[\s,]*)+$/.test(q) || /^\s*\d{5}\s*$/.test(q)) return '';
-  return q.trim().slice(0, 200);
-}
 async function fetchFaculty(q, limit = 10) {
   const key = `${limit}|${q.toLowerCase()}`;
   if (!facultyCache.has(key)) {
@@ -319,44 +312,6 @@ async function fetchFaculty(q, limit = 10) {
     facultyCache.set(key, data.results || []);
   }
   return facultyCache.get(key);
-}
-function facultyCard(f, q) {
-  const research = (f.matched.length ? f.matched : f.research_interests).slice(0, 4);
-  const more = f.research_interests.length - research.length;
-  return `<article class="faculty-card">
-      <div class="fc-head">
-        <a class="fc-name" href="${esc(f.profile_url)}" target="_blank" rel="noopener noreferrer">${esc(f.name)}</a>
-        <span class="fc-title">${esc(f.titles[0] || 'Faculty')}${f.departments.length ? ` · ${esc(f.departments.slice(0, 2).join(', '))}` : ''}</span>
-      </div>
-      ${research.length ? `<div class="fc-tags">${research.map((r) => `<span class="fc-tag${f.matched.includes(r) ? ' hit' : ''}${r.length > 60 ? ' long' : ''}">${esc(r)}</span>`).join('')}${more > 0 ? `<span class="fc-more">+${more} more</span>` : ''}</div>` : ''}
-      <div class="fc-actions">
-        ${f.email ? `<a class="btn" href="mailto:${esc(f.email)}">Email</a>` : ''}
-        <a class="btn" href="${esc(f.profile_url)}" target="_blank" rel="noopener noreferrer">Profile ↗</a>
-        ${f.google_scholar_url ? `<a class="btn" href="${esc(f.google_scholar_url)}" target="_blank" rel="noopener noreferrer">Scholar ↗</a>` : ''}
-        <button type="button" class="btn" data-ask-faculty="${esc(f.name)}" data-topic="${esc(q)}">Ask advisor</button>
-      </div>
-    </article>`;
-}
-function renderFaculty() {
-  const q = facultyQuery(state.query);
-  const box = els.results.querySelector('#faculty-results');
-  if (!box || !q) return;
-  clearTimeout(facultyTimer);
-  const show = (list, all) => {
-    if (state.query.trim().slice(0, 200) !== q || !els.results.contains(box)) return; // the search changed
-    if (!list.length) { box.innerHTML = ''; return; }
-    const visible = all ? list : list.slice(0, 3);
-    box.innerHTML = `<section class="faculty-results" aria-label="Faculty who research this">
-        <h3 class="eyebrow">Faculty who research this</h3>
-        ${visible.map((f) => facultyCard(f, q)).join('')}
-        ${!all && list.length > 3 ? `<button type="button" class="link-btn" data-more-faculty>Show ${list.length - 3} more faculty</button>` : ''}
-        <p class="small muted">From IIT's online directory. Profiles may be out of date.</p>
-      </section>`;
-    box.dataset.all = all ? '1' : '';
-  };
-  const cached = facultyCache.get(`10|${q.toLowerCase()}`);
-  if (cached) { show(cached, box.dataset.all === '1'); return; }
-  facultyTimer = setTimeout(() => { fetchFaculty(q).then((list) => show(list, false)).catch(() => { box.innerHTML = ''; }); }, 250);
 }
 
 function renderResults() {
@@ -369,7 +324,6 @@ function renderResults() {
   if (!total) {
     els.results.innerHTML = `<div class="results-head"><span>No results</span></div>
       ${semanticButton(q)}
-      <div id="faculty-results"></div>
       <p class="empty">Nothing matched “${esc(q)}”${filters ? ` with ${filters} filter${filters === 1 ? '' : 's'} on. <button type="button" class="link-btn" data-reset-filters>Clear filters</button>` : '.'}
       Try a course code like <button type="button" class="code-link" data-code="CS 331">CS 331</button> or a word like “graphics”.</p>`;
     return;
@@ -380,10 +334,8 @@ function renderResults() {
       <button type="button" data-clear>Clear search</button>
     </div>
     ${semanticButton(q)}
-    <div id="faculty-results"></div>
     ${shown.map((r) => courseCard(r.course)).join('')}
     ${total > state.shown ? `<button type="button" class="btn more-btn" data-show-more>Show ${Math.min(25, total - state.shown)} more</button>` : ''}`;
-  renderFaculty();
 }
 
 // phone layout hooks (set in init)
@@ -714,15 +666,6 @@ function wire() {
     if ((el = by('data-add'))) return toggleSaved(el.dataset.add);
     if ((el = by('data-add-course'))) return addCourse(el.dataset.addCourse);
     if ((el = by('data-semantic'))) return semanticSearch(el.dataset.semantic);
-    if ((el = by('data-more-faculty'))) {
-      els.results.querySelector('#faculty-results').dataset.all = '1';
-      return renderFaculty();
-    }
-    if ((el = by('data-ask-faculty'))) {
-      setTab('chat');
-      chat.ask(`I'm interested in ${el.dataset.topic} research. Tell me about ${el.dataset.askFaculty}'s research, which courses would prepare me to work with them, and how to reach out.`);
-      return undefined;
-    }
     if ((el = by('data-complete'))) return toggleCompleted(el.dataset.complete);
     if ((el = by('data-graph'))) { state.graphSelected = el.dataset.graph; if (!state.focus.includes(el.dataset.graph)) setQuery(el.dataset.graph, { focusInput: false }); setTab('graph'); return; }
     if ((el = by('data-ask'))) { setTab('chat'); chat.ask(`Tell me about ${el.dataset.ask}. What do I need before I can take it, and what does it lead to?`); return; }

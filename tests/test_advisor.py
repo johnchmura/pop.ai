@@ -403,5 +403,131 @@ class FacultyTests(unittest.TestCase):
             self.assertEqual(TestClient(server.app).get("/api/faculty", params={"q": "x"}).status_code, 503)
 
 
+class RefreshTests(unittest.TestCase):
+    """The cron job's scrapers and checks, on real IIT pages saved in tests/fixtures (no network)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import gzip
+
+        cls.rows = json.loads((FIXTURES / "csr_rows_cs.json").read_text(encoding="utf-8"))
+        with gzip.open(FIXTURES / "iit_directory_pages.json.gz", "rt", encoding="utf-8") as f:
+            cls.pages = json.load(f)
+
+    def seed_copy(self, courses=None):
+        """A temporary seed/ with advisor.json, faculty.json and (some of) the Spring 2027 sections."""
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        for name in ("advisor.json", "faculty.json"):
+            shutil.copy(ROOT / "seed" / name, tmp / name)
+        payload = json.loads((ROOT / "seed" / "spring_2027.json").read_text(encoding="utf-8"))
+        if courses is not None:
+            payload["courses"] = [c for c in payload["courses"] if courses(c)]
+        (tmp / "spring_2027.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        return tmp
+
+    def test_sections_rebuild_the_seed_exactly(self):
+        from app.advisor import refresh
+
+        seed_dir = self.seed_copy(lambda c: c["name"].startswith("CS "))
+        before = (seed_dir / "spring_2027.json").read_text(encoding="utf-8")
+        code = refresh.run(faculty="no", seed_dir=seed_dir, fetch_rows=lambda term: self.rows)
+        self.assertEqual(code, 0)
+        self.assertEqual((seed_dir / "spring_2027.json").read_text(encoding="utf-8"), before)  # same rows, same file
+
+        changed = [dict(r) for r in self.rows]
+        changed[0]["available"] = 0
+        refresh.run(faculty="no", seed_dir=seed_dir, fetch_rows=lambda term: changed)
+        self.assertNotEqual((seed_dir / "spring_2027.json").read_text(encoding="utf-8"), before)
+
+    def test_small_or_failed_scrapes_keep_the_seed(self):
+        from app.advisor import refresh
+
+        seed_dir = self.seed_copy()  # all 882 courses; the CS rows alone are far fewer
+        before = (seed_dir / "spring_2027.json").read_text(encoding="utf-8")
+        self.assertEqual(refresh.run(faculty="no", seed_dir=seed_dir, fetch_rows=lambda term: self.rows), 1)
+
+        def broken(term):
+            raise RuntimeError("403")
+
+        self.assertEqual(refresh.run(faculty="no", seed_dir=seed_dir, fetch_rows=broken), 1)
+        self.assertEqual((seed_dir / "spring_2027.json").read_text(encoding="utf-8"), before)
+
+    def test_profiles_parse_like_the_seed(self):
+        from app.advisor.faculty import clean_record
+        from app.advisor.refresh import parse_profile
+
+        seeded = {r["slug"]: r for r in json.loads((ROOT / "seed" / "faculty.json").read_text(encoding="utf-8"))["faculty"]}
+        for slug in ("sumanta-acharya", "bernhard-adams", "hamid-arastoopour"):
+            url = f"https://www.iit.edu/directory/people/{slug}"
+            got = clean_record(parse_profile(url, self.pages[f"profile_{slug}.html"]))
+            want = dict(seeded[slug])
+            if slug == "hamid-arastoopour":  # each title is now its own entry
+                self.assertEqual(" ".join(got["titles"]), want["titles"][0])
+                got["titles"] = want["titles"]
+            self.assertEqual(got, want)
+        acharya = clean_record(parse_profile("https://www.iit.edu/directory/people/sumanta-acharya",
+                                             self.pages["profile_sumanta-acharya.html"]))
+        self.assertTrue(acharya["research_interests"] and acharya["google_scholar_url"])
+
+    def test_directory_paging(self):
+        from app.advisor import refresh
+
+        urls, more = refresh.directory_links(self.pages["directory_page0.html"])
+        self.assertTrue(more)
+        self.assertEqual(urls[0], "https://www.iit.edu/directory/people/naser-abas")
+        self.assertEqual(len(urls), len(set(urls)))
+        self.assertEqual(refresh.directory_links(self.pages["directory_last.html"])[1], False)
+
+        def get(url):
+            if url.endswith("?profile_type=21"):
+                return self.pages["directory_page0.html"]
+            if url.endswith("&page=1"):
+                return self.pages["directory_last.html"]
+            return self.pages["profile_bernhard-adams.html"]
+
+        payload = refresh.refresh_faculty(get, pause=0)
+        self.assertEqual(len(payload["faculty"]), len(urls) + 1)
+        self.assertRegex(payload["read_on"], r"^\d{4}-\d{2}-\d{2}$")
+
+    def test_faculty_age(self):
+        import datetime as dt
+
+        from app.advisor import refresh
+
+        seed_dir = self.seed_copy()
+        read_on = dt.date.fromisoformat(json.loads((seed_dir / "faculty.json").read_text(encoding="utf-8"))["read_on"])
+        self.assertFalse(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=6)))
+        self.assertTrue(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=7)))
+        (seed_dir / "faculty.json").unlink()
+        self.assertTrue(refresh.faculty_is_stale(seed_dir))
+
+    def test_push_commits_only_seed_changes(self):
+        from app.advisor import refresh
+
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        git = lambda *a, cwd=tmp: subprocess.run(["git", *a], cwd=cwd, check=True, capture_output=True, text=True).stdout
+        git("init", "-q", "--bare", "-b", "master", "remote.git")
+        git("init", "-q", "-b", "master", "work")
+        (tmp / "work" / "seed").mkdir()
+        (tmp / "work" / "seed" / "faculty.json").write_text("{}\n")
+        git("add", ".", cwd=tmp / "work")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "start", cwd=tmp / "work")
+        git("push", "-q", str(tmp / "remote.git"), "master", cwd=tmp / "work")
+
+        new = tmp / "faculty.json"
+        new.write_text('{"faculty": []}\n')
+        env = {"GITHUB_TOKEN": "secret-token", "DATA_REPO": "owner/repo", "DATA_BRANCH": "master"}
+        with mock.patch.dict(os.environ, env), mock.patch.object(refresh, "remote_url", lambda t, r: str(tmp / "remote.git")):
+            self.assertTrue(refresh.push_seed([new], "Refresh data from IIT: test"))
+            self.assertFalse(refresh.push_seed([new], "again"))  # nothing new
+        log = git("--git-dir", str(tmp / "remote.git"), "log", "--format=%an|%s", "master")
+        self.assertEqual(log.splitlines()[0], "pop-advisor data bot|Refresh data from IIT: test")
+        with mock.patch.dict(os.environ, {"GITHUB_TOKEN": "", "DATA_REPO": "owner/repo"}):
+            with self.assertRaises(RuntimeError):
+                refresh.push_seed([new], "x")
+
+
 if __name__ == "__main__":
     unittest.main()

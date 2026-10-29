@@ -12,3 +12,19 @@ services:
         value: 3.12.8
       - key: ANTHROPIC_API_KEY
         sync: false   # you type this in the Render dashboard
+
+  # Daily data refresh: scrapes IIT's sections (and faculty, weekly) into seed/ and pushes changes to GitHub.
+  # The push makes Render redeploy pop-advisor, which rebuilds its database from seed/.
+  # Cron jobs are not free on Render (billed per minute of run time; a minimum monthly charge applies).
+  - type: cron
+    name: pop-advisor-refresh
+    runtime: python
+    plan: starter
+    schedule: "17 9 * * *"   # every day at 9:17 UTC (early morning in Chicago)
+    buildCommand: pip install -r requirements-advisor.txt
+    startCommand: python main.py advisor-refresh --push
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: GITHUB_TOKEN
+        sync: false   # a GitHub token that can push to this repository (contents: read and write)

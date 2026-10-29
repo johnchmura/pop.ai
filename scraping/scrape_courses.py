@@ -142,49 +142,23 @@ def format_time(time_str):
             
     return " - ".join(formatted_parts)
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Fetch Course Status Report into SQLite offerings."
-    )
-    parser.add_argument("semester", choices=["spring", "summer", "fall"], type=str.lower)
-    parser.add_argument("year", type=int)
-    parser.add_argument("-s", "--subjects", nargs="+", help="Specific subject codes to fetch")
+CSR_URL = "https://wildfly-prd.iit.edu/coursestatusreport/api/report/getCSR"
 
-    args = parser.parse_args()
 
-    code = term_code(args.semester, args.year)
-    semester_name = f"{args.semester.capitalize()} {args.year}"
-
-    if args.subjects:
-        target_codes = [s.upper() for s in args.subjects]
-        selected_subjects = [sub for sub in ALL_SUBJECTS if sub["subjectCode"] in target_codes]
-        if not selected_subjects:
-            print(f"Error: None of the subjects {target_codes} were found.")
-            sys.exit(1)
-    else:
-        selected_subjects = ALL_SUBJECTS
-
-    url = "https://wildfly-prd.iit.edu/coursestatusreport/api/report/getCSR"
-    payload = {
-        "selectedTerm": code,
-        "selectedSubjectsForTerm": selected_subjects
-    }
-
-    print(f"Fetching data for {semester_name}...")
-    response = requests.post(url, json=payload)
-
+def fetch_rows(code: str, subjects: list[dict] | None = None, timeout: int = 120) -> list[dict]:
+    """Rows from IIT's Course Status Report for one term code (raises on failure)."""
+    payload = {"selectedTerm": code, "selectedSubjectsForTerm": subjects or ALL_SUBJECTS}
+    response = requests.post(CSR_URL, json=payload, timeout=timeout)
     if response.status_code != 200:
-        print(f"Request failed: {response.status_code}\n{response.text}")
-        sys.exit(1)
+        raise RuntimeError(f"Request failed: {response.status_code}\n{response.text[:500]}")
+    rows = response.json()
+    if not isinstance(rows, list):
+        raise RuntimeError("API did not return a list of rows as expected.")
+    return rows
 
-    raw_csr_data = response.json()
 
-    if not isinstance(raw_csr_data, list):
-        print("Error: API did not return a list of rows as expected.")
-        sys.exit(1)
-
-    print("Formatting times and grouping sections")
-
+def group_rows(raw_csr_data: list[dict]) -> list[dict]:
+    """Group report rows into courses: {name, title, sections: {bucket: [section, ...]}}."""
     courses_map = {}
 
     for row in raw_csr_data:
@@ -246,7 +220,40 @@ def main():
         }
         courses_map[course_name]["sections"][bucket].append(section_obj)
 
-    offerings = [Offering.model_validate(course) for course in courses_map.values()]
+    return list(courses_map.values())
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Fetch Course Status Report into SQLite offerings."
+    )
+    parser.add_argument("semester", choices=["spring", "summer", "fall"], type=str.lower)
+    parser.add_argument("year", type=int)
+    parser.add_argument("-s", "--subjects", nargs="+", help="Specific subject codes to fetch")
+
+    args = parser.parse_args()
+
+    code = term_code(args.semester, args.year)
+    semester_name = f"{args.semester.capitalize()} {args.year}"
+
+    if args.subjects:
+        target_codes = [s.upper() for s in args.subjects]
+        selected_subjects = [sub for sub in ALL_SUBJECTS if sub["subjectCode"] in target_codes]
+        if not selected_subjects:
+            print(f"Error: None of the subjects {target_codes} were found.")
+            sys.exit(1)
+    else:
+        selected_subjects = ALL_SUBJECTS
+
+    print(f"Fetching data for {semester_name}...")
+    try:
+        raw_csr_data = fetch_rows(code, selected_subjects)
+    except (RuntimeError, requests.RequestException) as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    print("Formatting times and grouping sections")
+    offerings = [Offering.model_validate(course) for course in group_rows(raw_csr_data)]
     print(f"Compiled into {len(offerings)} unique courses.")
 
     semester_id = upsert_semester(
