@@ -141,7 +141,6 @@ function courseMatchesFilters(course) {
   const f = state.filters;
   if (f.subjects.length && !f.subjects.includes(course.subject)) return false;
   if (f.levels.length && !f.levels.includes(course.level)) return false;
-  if (f.offered && !course.sections.length) return false;
   if (f.open && !course.sections.some((s) => s.available == null || s.available > 0)) return false;
   if (f.days.length) {
     const ok = course.sections.some((s) => s.meetings.some((m) => m.days && m.days !== 'TBA')
@@ -159,7 +158,7 @@ function courseMatchesFilters(course) {
 }
 function activeFilterCount() {
   const f = state.filters;
-  return (f.subjects.length ? 1 : 0) + (f.levels.length ? 1 : 0) + (f.days.length ? 1 : 0) + (f.offered ? 1 : 0) + (f.open ? 1 : 0) + (f.eligible ? 1 : 0);
+  return (f.subjects.length ? 1 : 0) + (f.levels.length ? 1 : 0) + (f.days.length ? 1 : 0) + (f.open ? 1 : 0) + (f.eligible ? 1 : 0);
 }
 
 // ---------- search + results ----------
@@ -174,6 +173,7 @@ function runSearch() {
       searchDescriptions: state.options.searchDescriptions,
       searchSections: state.options.searchSections,
       filter: courseMatchesFilters,
+      require: (course) => course.sections.length > 0, // only courses that can be added this semester
     });
     state.results = r.results;
     state.focus = r.focus;
@@ -292,7 +292,7 @@ async function semanticSearch(q) {
     const res = await fetch('/api/search/semantic', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, limit: 15 }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-    const codes = (data.results || []).map((r) => normalizeCode(r.code)).filter((c) => c && known(c));
+    const codes = (data.results || []).map((r) => normalizeCode(r.code)).filter((c) => c && known(c) && state.index.courses.get(c).sections.length);
     if (!codes.length) throw new Error('No courses found for that topic.');
     setQuery(codes.join(', '), { focusInput: false }); // the comma list shows every match
   } catch (err) {
@@ -321,10 +321,16 @@ function renderResults() {
   if (!q) { els.results.innerHTML = ''; return; }
   const total = state.results.length;
   const filters = activeFilterCount();
+  // search lists only courses with sections this semester; say so when a typed code is not offered
+  const notOffered = state.focus.filter((c) => !state.index.courses.get(c)?.sections.length);
+  const offNote = notOffered.length
+    ? `<p class="search-note small muted">Not offered in ${esc(state.index.semester)}: ${notOffered.map(esc).join(', ')}. Search lists only courses with sections to add. Ask the advisor for the next offering.</p>`
+    : '';
   if (!total) {
     els.results.innerHTML = `<div class="results-head"><span>No results</span></div>
+      ${offNote}
       ${semanticButton(q)}
-      <p class="empty">Nothing matched “${esc(q)}”${filters ? ` with ${filters} filter${filters === 1 ? '' : 's'} on. <button type="button" class="link-btn" data-reset-filters>Clear filters</button>` : '.'}
+      <p class="empty">No courses offered in ${esc(state.index.semester)} matched “${esc(q)}”${filters ? ` with ${filters} filter${filters === 1 ? '' : 's'} on. <button type="button" class="link-btn" data-reset-filters>Clear filters</button>` : '.'}
       Try a course code like <button type="button" class="code-link" data-code="CS 331">CS 331</button> or a word like “graphics”.</p>`;
     return;
   }
@@ -333,6 +339,7 @@ function renderResults() {
       <span>${total} result${total === 1 ? '' : 's'}${filters ? ` · ${filters} filter${filters === 1 ? '' : 's'} on` : ''}</span>
       <button type="button" data-clear>Clear search</button>
     </div>
+    ${offNote}
     ${semanticButton(q)}
     ${shown.map((r) => courseCard(r.course)).join('')}
     ${total > state.shown ? `<button type="button" class="btn more-btn" data-show-more>Show ${Math.min(25, total - state.shown)} more</button>` : ''}`;
@@ -631,7 +638,7 @@ function wire() {
   seg($('#f-subject'), subjects, 'subjects', (s) => s);
   seg($('#f-level'), levels, 'levels', (l) => `${l}s`);
   seg($('#f-days'), ['M', 'T', 'W', 'R', 'F'], 'days', (d) => d);
-  for (const [id, key] of [['f-offered', 'offered'], ['f-open', 'open'], ['f-eligible', 'eligible']]) {
+  for (const [id, key] of [['f-open', 'open'], ['f-eligible', 'eligible']]) {
     const box = $(`#${id}`);
     box.checked = !!state.filters[key];
     box.addEventListener('change', () => { state.filters[key] = box.checked; filtersChanged(); });
@@ -754,7 +761,7 @@ function filtersChanged() {
 function resetFilters() {
   state.filters = { ...DEFAULT_FILTERS, subjects: [], levels: [], days: [] };
   for (const b of $$('.seg button', els.filtersPanel)) b.setAttribute('aria-pressed', 'false');
-  for (const id of ['f-offered', 'f-open', 'f-eligible']) $(`#${id}`).checked = false;
+  for (const id of ['f-open', 'f-eligible']) $(`#${id}`).checked = false;
   filtersChanged();
 }
 

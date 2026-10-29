@@ -194,8 +194,9 @@ def faculty_block(index: FacultyIndex | None, question: str, read_on: str = "", 
     source = f"IIT's online directory{f', read {read_on}' if read_on else ''}"
     if not hits:
         return (f"FACULTY MATCHES ({source}): no faculty matched this question's topic. Do not name faculty from memory. "
-                "Ask the student which topic or field interests them, or suggest searching the app.")
-    lines = [f"FACULTY MATCHES ({source}; best matches for this question, best first). Name only these people when you suggest faculty:"]
+                "Ask the student which topic or field interests the student.")
+    lines = [f"FACULTY MATCHES ({source}; best matches for this question, best first). Name only these people when you suggest faculty. "
+             "Refer to each person by name or title, never with he, she, or they:"]
     for n, h in enumerate(hits, 1):
         research = "; ".join((h["matched"] or h["research_interests"])[:5]) or "not listed"
         parts = [f"{n}. {h['name']}", ", ".join(h["titles"][:2]) or "Faculty", ", ".join(h["departments"][:3])]

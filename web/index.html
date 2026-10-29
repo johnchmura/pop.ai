@@ -92,7 +92,6 @@
           </div>
         </div>
         <div class="filter-row">
-          <label><input type="checkbox" id="f-offered"> Offered this semester</label>
           <label><input type="checkbox" id="f-open"> Has open seats</label>
           <label><input type="checkbox" id="f-eligible"> Only courses I can take now</label>
           <button type="button" class="link-btn" id="f-reset">Reset filters</button>
@@ -222,7 +221,7 @@
             <button type="button" class="btn" id="paste-go">Read text</button>
           </div>
           <div class="upload-status" id="upload-status" aria-live="polite"></div>
-          <p class="hint">Your transcript is read and saved only in this browser. If you press “Read with Claude”, the file is sent to the Claude API to read it and is not stored.</p>
+          <p class="hint">Your transcript is saved only in this browser. To read it, the file is sent to the Claude API, which does not store it. If Claude is not set up, the app reads it in this browser instead.</p>
         </div>
         <div id="degree-body"></div>
       </section>

@@ -431,14 +431,26 @@ export function wireDegree(els, hooks) {
     ? ' <button type="button" class="btn" data-read-claude>Read with Claude</button>'
     : ' Ask the site owner to add a Claude API key to read scanned files, or paste the text instead.');
 
-  async function handleText(text, source) {
+  async function handleText(text, source, note = '') {
     const { courses, warnings } = parseTranscriptText(text, { catalogTitles: hooks.catalogTitles });
     if (courses.length >= 3) {
       apply(courses, source, warnings, { headerText: text });
-      status(`Read <strong>${courses.length}</strong> course rows from ${esc(source)}. Check the list below if anything looks wrong.${hooks.hasClaude() ? ' <button type="button" class="link-btn" data-read-claude>Read again with Claude</button>' : ''}`, 'ok');
+      status(`${note}Read <strong>${courses.length}</strong> course rows from ${esc(source)}. Check the list below if anything looks wrong.${hooks.hasClaude() ? ' <button type="button" class="link-btn" data-read-claude>Read again with Claude</button>' : ''}`, note ? 'warn' : 'ok');
     } else {
-      status(`Only found ${courses.length} course row${courses.length === 1 ? '' : 's'} in ${esc(source)}. It may be a scanned or unusual file.${claudeButton()}`, 'warn');
+      status(`${note}Only found ${courses.length} course row${courses.length === 1 ? '' : 's'} in ${esc(source)}. It may be a scanned or unusual file.${claudeButton()}`, 'warn');
     }
+  }
+
+  /** Uploads and pasted text: Claude reads them by default; the app's own parser is the fallback. */
+  async function readInput(text, source) {
+    if (hooks.hasClaude()) {
+      const err = await readWithClaude();
+      if (!err) return;
+      if (!text?.trim()) { status(`${esc(err)}${claudeButton()}`, 'warn'); return; }
+      await handleText(text, source, `Claude could not read it (${esc(err)}), so the app's parser read it instead. `);
+      return;
+    }
+    await handleText(text, source);
   }
 
   async function handleFile(file) {
@@ -449,17 +461,17 @@ export function wireDegree(els, hooks) {
     try {
       if (kind === 'pdf') {
         status('Reading the PDF…');
-        const text = await pdfToText(file);
-        if (!text.trim()) { status(`This PDF has no text layer (it may be a scan).${claudeButton()}`, 'warn'); return; }
+        const text = await pdfToText(file).catch(() => '');
         lastInput.text = text;
-        await handleText(text, file.name);
+        if (!text.trim() && !hooks.hasClaude()) { status(`This PDF has no text layer (it may be a scan).${claudeButton()}`, 'warn'); return; }
+        await readInput(text, file.name);
       } else if (kind === 'text') {
         const text = await file.text();
         lastInput.text = text;
-        await handleText(text, file.name);
+        await readInput(text, file.name);
       } else if (kind === 'image') {
-        status(`Images need Claude to read them.${claudeButton()}`, hooks.hasClaude() ? '' : 'warn');
-        if (hooks.hasClaude()) await readWithClaude();
+        if (!hooks.hasClaude()) { status(`Images need Claude to read them.${claudeButton()}`, 'warn'); return; }
+        await readInput('', file.name);
       } else {
         status('Use a PDF, HTML, TXT, PNG, or JPG file.', 'warn');
       }
@@ -469,8 +481,9 @@ export function wireDegree(els, hooks) {
     }
   }
 
+  /** Send the last upload to Claude. Returns '' when it worked, else the error message. */
   async function readWithClaude() {
-    if (!lastInput) return;
+    if (!lastInput) return 'Nothing to read.';
     status('Claude is reading your transcript… this can take up to a minute.');
     try {
       let body;
@@ -483,11 +496,14 @@ export function wireDegree(els, hooks) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
       const courses = cleanRecords(data.courses);
-      if (!courses.length) { status('Claude did not find any courses in that file.', 'warn'); return; }
+      if (!courses.length) throw new Error('Claude did not find any courses in that file');
       apply(courses, `${lastInput.file?.name || 'pasted text'} (read by Claude)`, data.warnings || [], { headerText: lastInput.text || '', majors: data.majors || [] });
       status(`Claude read <strong>${courses.length}</strong> course rows. Check the list below.`, 'ok');
+      return '';
     } catch (err) {
-      status(esc(err.message || 'Claude could not read the transcript.'), 'warn');
+      const msg = err.message || 'Claude could not read the transcript';
+      status(esc(msg), 'warn');
+      return msg;
     }
   }
 
@@ -504,7 +520,7 @@ export function wireDegree(els, hooks) {
     const text = els.pasteText.value;
     if (!text.trim()) return;
     lastInput = { kind: 'text', text };
-    handleText(text, 'pasted text');
+    readInput(text, 'pasted text');
   });
   els.sample.addEventListener('click', async () => {
     const text = await (await fetch('/samples/sample-transcript.txt')).text();

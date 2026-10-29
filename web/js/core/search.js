@@ -90,11 +90,12 @@ function scoreCourse(course, rx, opts) {
 
 /**
  * Search the index.
- * opts: { searchDescriptions, searchSections, filter(course) -> bool }
+ * opts: { searchDescriptions, searchSections, filter(course) -> bool, require(course) -> bool }
+ * filter() can be bypassed by an exact code or CRN; require() never is.
  * Returns { results: [{ course, score, part }], focus: [codes typed exactly], keywords: [...] }.
  */
 export function search(index, query, opts = {}) {
-  const o = { searchDescriptions: true, searchSections: true, filter: () => true, ...opts };
+  const o = { searchDescriptions: true, searchSections: true, filter: () => true, require: () => true, ...opts };
   const parts = String(query || '').split(/[,;]+/).map((p) => p.trim()).filter(Boolean);
   const best = new Map();
   const focus = [];
@@ -126,6 +127,7 @@ export function search(index, query, opts = {}) {
   });
 
   function add(course, score, part, crn) {
+    if (!o.require(course)) return;
     if (!o.filter(course) && !(focus.includes(course.code) || crn)) return;
     const prev = best.get(course.code);
     if (!prev || score > prev.score || (score === prev.score && part < prev.part)) {
