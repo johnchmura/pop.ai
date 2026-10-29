@@ -1,131 +1,110 @@
-# advisor. on Pop
+# Pop.ai
 
-A course advisor for Illinois Tech, built on [Pop](https://github.com/johnchmura/pop.ai). Pop's Python server, SQLite database, and scrapers are the foundation. The advisor adds a degree audit, semester plans with suggested courses, a prerequisite graph, a weekly schedule, transcript upload, and a Claude chat advisor.
+Search Illinois Tech courses, build a schedule, and plan your degree with an AI advisor.
 
-## Quick start
+This started as [Soda](http://madebyevan.com/soda/app/) by [Evan Wallace](https://github.com/evanw/) at Brown. [Eric Tendian](https://tendian.io/) adapted it for Illinois Tech as Pop; this repo is a fork of [clarifyeducation/pop](https://github.com/clarifyeducation/pop). This fork adds AI to help IIT students: semantic search, and **advisor.**, a course advisor built on Pop's data.
+
+## Two apps, one database
+
+Both apps read the same SQLite database (`data/pop.db`), filled by Pop's scrapers.
+
+| App | What it does | Start | Open |
+|---|---|---|---|
+| **advisor.** | Search, weekly schedule, prerequisite graph, degree audit from a transcript, semester plans with suggested courses, Claude chat advisor. Works on phones. | `python main.py advisor-serve` | http://localhost:3000 |
+| **Pop search page** | The classic Pop page: one search box, a cart, and a schedule. Shift+Enter runs semantic search. | `./run.sh spring 2027` | http://localhost:8000/spring2027.html |
+
+## Setup
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-advisor.txt
-cp .env.example .env            # add ANTHROPIC_API_KEY for Claude chat (optional)
-python main.py advisor-seed     # load seed/ into data/pop.db (first time)
-python main.py advisor-serve    # http://localhost:3000
+git clone https://github.com/johnchmura/pop.ai.git
+cd pop.ai
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt     # everything, including semantic search
+cp .env.example .env                # add ANTHROPIC_API_KEY for Claude chat (optional)
 ```
 
-Without an API key the app still works: chat answers come from the app's own data.
+For the advisor only, `pip install -r requirements-advisor.txt` is enough. It skips the large machine-learning libraries, so semantic search is off.
 
-## How it is built
+## Get the data
 
-| Part | Where | What it does |
-|---|---|---|
-| Database | `data/pop.db` (Pop's SQLite) | Pop's tables hold the catalog (`catalog_courses`) and sections (`semesters`, `courses`). The advisor adds one table, `advisor_data`, for degree programs, the CS forecast, department names, and hand-checked prerequisite fixes. |
-| Scrapers | `scraping/` (Pop) | Fill the database from catalog.iit.edu and IIT's Course Status Report. |
-| Server | `app/advisor/` (FastAPI) | Builds `/data/*.json` from the database, adds COURSE DATA to Claude requests, streams chat, reads transcripts with Claude, and serves the page. |
-| Page | `web/` | The advisor's interface and logic: search, schedule, graph, degree audit, plans, suggestions, settings, mobile layout. |
-| Seed data | `seed/` | The advisor's checked catalog, 50 degree programs, forecast, and real Spring 2027 sections, so a new checkout works without scraping. |
+Pick one:
 
-Server routes: `GET /api/health`, `GET /data/{catalog,sections,forecast,programs}.json`, `POST /api/chat` (server-sent events), `POST /api/plan`, `POST /api/transcript`, `POST /api/search/semantic`.
+- **Seed data (quick, no scraping):** `python main.py advisor-seed`. Loads the checked catalog, 50 degree programs, the CS forecast, and real Spring 2027 sections from `seed/`.
+- **Scrape IIT with Pop:**
+  ```bash
+  python scraping/scrape_descriptions.py        # the full catalog
+  python scraping/scrape_courses.py spring 2027 # sections, times, rooms, seats
+  python main.py advisor-seed --keep-catalog --keep-sections   # adds the advisor's degree data, keeps the scraped data
+  ```
 
-The page builds each student's context (transcript, saved sections, degree progress) and sends it with the question. The server adds COURSE DATA from the database, so the full course list never leaves the server.
+Without `--keep-catalog` and `--keep-sections`, `advisor-seed` replaces the catalog and the Spring 2027 sections with the seed copies. Run the scrapers again any time; restart the advisor afterwards.
 
-## Real data from Pop
-
-Pop's scrapers write straight into the database the advisor reads. Restart the server after scraping.
+## Run the advisor
 
 ```bash
-python scraping/scrape_courses.py spring 2027      # real sections, times, rooms, seats
-python scraping/scrape_descriptions.py             # the full catalog (replaces the seed catalog)
-python main.py advisor-serve
+python main.py advisor-serve        # http://localhost:3000
 ```
 
-The semester the schedule and plans use is set in `seed/advisor.json` (`"semester"`). Prerequisite fixes in `advisor_data` apply only while the catalog wording is the same, so new wording from the scraper wins.
+Use `--port 3001` if port 3000 is busy. Without `ANTHROPIC_API_KEY`, the app still works and chat answers come from the app's own data. If the database is empty on the first start, the advisor loads `seed/` by itself.
 
-To change degree programs or the forecast, edit `seed/programs.json` or `seed/forecast.json`, then run `python main.py advisor-seed --keep-catalog --keep-sections`.
-
-### Search by meaning
-
-Pop's semantic search works in the advisor's search box ("Search by meaning") when Pop's model is installed and the semester is indexed:
+## Run the Pop search page
 
 ```bash
-pip install -r requirements.txt
+./run.sh spring 2027
+```
+
+`run.sh` indexes the semester for semantic search if needed, exports the page data, and starts the semantic API (:8001) and the static server (:8000). It needs `envsubst` (`sudo apt install gettext-base` if missing; on a Mac, `brew install gettext`).
+
+After changing the embedding text logic, reindex so the vectors match: `./run.sh spring 2027 --reindex`.
+
+## Semantic search
+
+Pop's semantic search finds courses by meaning, not exact words. It needs `requirements.txt` and an indexed semester:
+
+```bash
 python main.py index spring 2027
 ```
 
-## Tests
-
-```bash
-python -m unittest tests.test_advisor tests.test_db -v   # server, data, parser, COURSE DATA parity
-node --test web/test/*.test.mjs                           # page logic (search, audit, planner, suggestions, ...)
-```
-
-## Deploy on Render
-
-`render.yaml` deploys the advisor: New → Blueprint, pick the repo, paste `ANTHROPIC_API_KEY`. The build loads `seed/` into a fresh database.
-
-## Notes
-
-- `scripts/seed_from_node_advisor.py` made `seed/` from the earlier Node version of the advisor.
-- A full catalog scrape makes COURSE DATA longer (full descriptions for every subject). The server prints a warning if it gets very long.
-- Not an official Illinois Tech service. Confirm plans with your academic advisor.
-
----
-
-# Pop.ai
-
-Search Illinois Tech courses in the browser: one search box, a cart, and a schedule.
-
-This started as [Soda](http://madebyevan.com/soda/app/) by [Evan Wallace](https://github.com/evanw/) at Brown. [Eric Tendian](https://tendian.io/) adapted it for Illinois Tech as Pop; this repo is a fork of [clarifyeducation/pop](https://github.com/clarifyeducation/pop). This fork will enhance this great project with AI elements to further help the students at IIT.
+The Pop page runs it with Shift+Enter. The advisor shows a **Search by meaning** button in its search results once the semester is indexed.
 
 ## Files
 
-- [src/](src/) - client app; `python main.py build` concatenates into `www/soda.js`.
-- [www/](www/) - static UI and templates.
-- [app/](app/) - FastAPI API, Pydantic models, SQLite + sqlite-vec (`data/pop.db`).
-- [main.py](main.py) - CLI: `build`, `serve`, `index`, `import-data`.
-- [scraping/](scraping/) - course and catalog scrapers.
-- [run.sh](run.sh) - index if needed, export Pop JS, start API + static server.
-- [requirements.txt](requirements.txt) - Python deps.
+| Path | What it is |
+|---|---|
+| `scraping/` | Scrapers for catalog.iit.edu, IIT's Course Status Report, and program pages. |
+| `app/db.py`, `app/data_models.py` | SQLite + sqlite-vec storage and models. |
+| `app/api.py` | Semantic search API (embeddings). |
+| `app/advisor/` | The advisor's server (FastAPI): data from the database, Claude chat, plans, transcript reading. |
+| `web/` | The advisor's page and its logic (search, schedule, graph, audit, planner, suggestions). |
+| `seed/` | Seed data for the advisor. `advisor.json` sets the schedule semester (`"semester"`). |
+| `advisor_instructions.txt` | The advisor's system prompt. Edits apply without a restart. |
+| `src/`, `www/` | The Pop page. `python main.py build` joins `src/*.js` into `www/soda.js`. |
+| `main.py` | CLI: `build`, `serve`, `index`, `import-data`, `advisor-seed`, `advisor-serve`. |
+| `run.sh` | Starts the Pop page with semantic search. |
 
-## Run to Setup
-```bash
-git clone https://github.com/johnchmura/pop.ai.git
+## How the advisor uses Pop's data
 
-python -m venv .venv
-source .venv/bin/activate
+- **Catalog and sections:** from Pop's tables (`catalog_courses`, `semesters`, `courses`). Prerequisite text is turned into AND/OR trees for the graph, the audit, and the planner.
+- **Advisor data:** one extra table, `advisor_data`, holds the degree programs, the CS forecast, department names, and hand-checked prerequisite fixes. A fix applies only while the catalog wording is the same, so new wording from the scraper wins.
+- **Claude:** the page sends the student's own context (transcript, saved sections, progress) with each question. The server adds the course list from the database and calls Claude. Routes: `GET /api/health`, `GET /data/*.json`, `POST /api/chat`, `POST /api/plan`, `POST /api/transcript`, `POST /api/search/semantic`.
 
-pip install -r requirements.txt
-python scraping/scrape_descriptions.py
-python scraping/scrape_courses.py fall 2026
-./run.sh fall 2026
-```
-
-Open http://localhost:8000/fall2026.html
-
-Shift+Enter runs semantic search (API on :8001). `run.sh` needs `envsubst` (`sudo apt install gettext-base` if missing).
-
-After changing embedding text logic, reindex so vectors match:
-
-```bash
-./run.sh fall 2026 --reindex
-```
-
-Optional clean DB (drops leftover unused columns like old `meta_json`):
-
-```bash
-rm data/pop.db
-python scraping/scrape_descriptions.py
-python scraping/scrape_courses.py fall 2026
-./run.sh fall 2026 --reindex
-```
-
-```bash
-python main.py build
-python main.py serve
-python main.py index fall 2026
-python main.py import-data --all-semesters
-```
+To change degree programs or the forecast, edit `seed/programs.json` or `seed/forecast.json`, then run `python main.py advisor-seed --keep-catalog --keep-sections`.
 
 ## Tests
+
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v                 # all Python tests (needs requirements.txt)
+python -m unittest tests.test_advisor tests.test_db -v  # without the machine-learning libraries
+node --test web/test/*.test.mjs                         # the advisor page's logic
 ```
+
+## Deploy
+
+`render.yaml` deploys the advisor on Render: **New → Blueprint**, pick the repo, and paste `ANTHROPIC_API_KEY`. The build loads `seed/` into a new database. The Pop page and semantic search are not deployed.
+
+## Notes
+
+- Not an official Illinois Tech service. Confirm plans with your academic advisor.
+- A full catalog scrape adds long descriptions for every subject, so the course list sent to Claude gets longer. The advisor prints a warning at start if it gets too long.
+- `scripts/seed_from_node_advisor.py` made `seed/` from the earlier Node version of the advisor ([WillMo2198/advisor](https://github.com/WillMo2198/advisor)).
