@@ -1,0 +1,30 @@
+name: advisor tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4   # one test compares the Python COURSE DATA with the page's JavaScript
+        with:
+          node-version: 20
+      - run: pip install -r requirements-advisor.txt
+      - run: python -m unittest tests.test_advisor tests.test_db -v
+  page:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --test web/test/*.test.mjs

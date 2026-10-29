@@ -1,0 +1,58 @@
+Illinois Institute of Technology
+Academic Transcript (Unofficial) - SAMPLE. This is a made-up student for testing advisor.
+Student Information
+Name: Sample Student
+Program: Bachelor of Science
+Major and Department: Computer Science, Computer Science
+
+TRANSFER CREDIT ACCEPTED BY INSTITUTION
+Fall 2024: Advanced Placement
+Subject Course Title Grade Credit Hours
+MATH 151 Calculus I TR 5.000
+COM 101 Introduction to Writing TR 3.000
+
+INSTITUTION CREDIT
+Term: Fall 2024
+Subject Course Level Title Grade Credit Hours Quality Points R
+CS 100 UG Introduction to the Profession A 2.000 8.000
+CS 115 UG Object-Oriented Programming I A 2.000 8.000
+MATH 152 UG Calculus II B 5.000 15.000
+PHYS 123 UG General Physics I: Mechanics B 4.000 12.000
+HUM 104 UG Age of Darwin A 3.000 12.000
+Term Totals (Undergraduate) Attempt Hours 16.000 Passed Hours 16.000 GPA 3.50
+
+Term: Spring 2025
+Subject Course Level Title Grade Credit Hours Quality Points R
+CS 116 UG Object-Oriented Programming II B 2.000 6.000
+CS 330 UG Discrete Structures B 3.000 9.000
+MATH 251 UG Multivariate and Vector Calculus D 4.000 4.000 E
+PSYC 221 UG Human Behavior, Growth, and Learning A 3.000 12.000
+IPRO 497 UG Interprofessional Project W 0.000 0.000
+
+Term: Fall 2025
+Subject Course Level Title Grade Credit Hours Quality Points R
+CS 331 UG Data Structures and Algorithms A 3.000 12.000
+CS 350 UG Computer Organization and Assembly Language Programming B 3.000 9.000
+MATH 251 UG Multivariate and Vector Calculus B 4.000 12.000 I
+PHYS 221 UG General Physics II: Electricity and Magnetism B 4.000 12.000
+ECON 211 UG Principles of Economics A 3.000 12.000
+
+Term: Spring 2026
+Subject Course Level Title Grade Credit Hours Quality Points R
+CS 351 UG Systems Programming A 3.000 12.000
+CS 340 UG Programming Paradigms and Patterns A 3.000 12.000
+MATH 332 UG Linear Algebra: Theory and Applications B 3.000 9.000
+HIST 380 UG Topics in History A 3.000 12.000
+CHEM 122 UG Principles of Chemistry I C 3.000 6.000
+
+TRANSCRIPT TOTALS (UNDERGRADUATE)
+Total Institution 59.000 GPA 3.31
+
+COURSES IN PROGRESS
+Term: Fall 2026
+Subject Course Level Title Credit Hours
+CS 425 UG Database Organization 3.000
+CS 430 UG Introduction to Algorithms 3.000
+MATH 474 UG Probability and Statistics 3.000
+IPRO 497 UG Interprofessional Project 3.000
+PHIL 370 UG Philosophy of Science 3.000

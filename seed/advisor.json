@@ -1,0 +1,3020 @@
+{
+ "catalogSource": "Illinois Tech undergraduate catalog, catalog.iit.edu/courses (CS, MATH, Humanities and Social Sciences, and the subjects in data/source/courses), read October 2026. Descriptions are short paraphrases.",
+ "departments": {
+  "CS": "Computer Science",
+  "MATH": "Mathematics",
+  "HUM": "Humanities",
+  "HIST": "History",
+  "PHIL": "Philosophy",
+  "LIT": "Literature",
+  "AAH": "Art and Architecture History",
+  "PSYC": "Psychology",
+  "PS": "Political Science",
+  "ECON": "Economics",
+  "SOC": "Sociology",
+  "SSCI": "Social Sciences",
+  "ECE": "Electrical and Computer Engineering",
+  "MMAE": "Mechanical, Materials, and Aerospace Engineering",
+  "PHYS": "Physics",
+  "CHEM": "Chemistry",
+  "BIOL": "Biology",
+  "BUS": "Business",
+  "CAE": "Civil, Architectural, and Environmental Engineering",
+  "ARCH": "Architecture",
+  "AURB": "Architecture and Urbanism",
+  "BME": "Biomedical Engineering",
+  "CHE": "Chemical Engineering",
+  "COM": "Communication",
+  "DS": "Data Science",
+  "EG": "Engineering Graphics",
+  "EMGT": "Engineering Management",
+  "ENVE": "Environmental Engineering",
+  "ENGR": "Engineering",
+  "FDSN": "Foundation",
+  "GEM": "Global Engineering and Management",
+  "INTM": "Interprofessional Studies",
+  "ITM": "Information Technology and Management",
+  "ITMD": "ITM Development",
+  "ITMM": "ITM Management",
+  "ITMO": "ITM Operations",
+  "ITMS": "ITM Security",
+  "ITMT": "ITM Technology",
+  "IPRO": "Interprofessional Projects",
+  "LAW": "Law",
+  "MS": "Materials Science",
+  "STAT": "Statistics",
+  "TECH": "Technology",
+  "ID": "Industrial Design",
+  "IDX": "Industrial Design Interdisciplinary",
+  "BANL": "Business Analytics",
+  "CAPS": "Capstone"
+ },
+ "prereqFixes": {
+  "CS 397": {
+   "prereq": {
+    "type": "text",
+    "text": "Instructor permission"
+   },
+   "forText": "Instructor permission required."
+  },
+  "CS 401": {
+   "bridge": true
+  },
+  "CS 402": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     }
+    ]
+   },
+   "forText": "CS 401 or CSSP 401 with min. grade of S",
+   "bridge": true
+  },
+  "CS 403": {
+   "bridge": true
+  },
+  "CS 411": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 401"
+       },
+       {
+        "type": "course",
+        "code": "CSSP 401",
+        "minGrade": "S"
+       }
+      ]
+     },
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "MATH 332"
+       },
+       {
+        "type": "course",
+        "code": "MATH 333"
+       }
+      ]
+     }
+    ]
+   },
+   "forText": "(CS 331 or CS 401 or CSSP 401 with min. grade of S) and (MATH 332 or MATH 333)"
+  },
+  "CS 422": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 331"
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "CS 331 or CS 401 or CSSP 401 with min. grade of S or CS 403"
+  },
+  "CS 425": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 331"
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "CS 331 or CS 401 or CSSP 401 with min. grade of S or CS 403"
+  },
+  "CS 429": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 331"
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     }
+    ]
+   },
+   "forText": "CS 331 or CS 401 or CSSP 401 with min. grade of S"
+  },
+  "CS 430": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 330"
+       }
+      ]
+     },
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "MATH 230"
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "(CS 331 and CS 330) or (CS 331 and MATH 230) or CS 401 or CSSP 401 with min. grade of S or CS 403"
+  },
+  "CS 440": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 330"
+       }
+      ]
+     },
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "MATH 230"
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "(CS 331 and CS 330) or (CS 331 and MATH 230) or CS 401 or CSSP 401 with min. grade of S or CS 403"
+  },
+  "CS 445": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 331"
+     },
+     {
+      "type": "course",
+      "code": "CS 401"
+     },
+     {
+      "type": "course",
+      "code": "CSSP 401",
+      "minGrade": "S"
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "CS 331 or CS 401 or CSSP 401 with min. grade of S or CS 403"
+  },
+  "CS 450": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 351"
+     },
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "or",
+        "children": [
+         {
+          "type": "course",
+          "code": "CS 401"
+         },
+         {
+          "type": "course",
+          "code": "CSSP 401"
+         }
+        ]
+       },
+       {
+        "type": "or",
+        "children": [
+         {
+          "type": "course",
+          "code": "CS 402"
+         },
+         {
+          "type": "course",
+          "code": "CSSP 402"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "CS 351 or CS 401 or CSSP 401 and CS 402 or CSSP 402 or CS 403",
+   "note": "The catalog text has no parentheses. Stored as: CS 351, or (CS 401 or CSSP 401) and (CS 402 or CSSP 402), or CS 403."
+  },
+  "CS 456": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "CS 350"
+     },
+     {
+      "type": "course",
+      "code": "ECE 242"
+     },
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "or",
+        "children": [
+         {
+          "type": "course",
+          "code": "CS 401"
+         },
+         {
+          "type": "course",
+          "code": "CSSP 401"
+         }
+        ]
+       },
+       {
+        "type": "or",
+        "children": [
+         {
+          "type": "course",
+          "code": "CS 402"
+         },
+         {
+          "type": "course",
+          "code": "CSSP 402"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "CS 403"
+     }
+    ]
+   },
+   "forText": "CS 350 or ECE 242 CS 401 or CSSP 401 and CS 402 or CSSP 402 or CS 403",
+   "note": "The catalog text is missing a word. Stored as: CS 350, or ECE 242, or (CS 401 or CSSP 401) and (CS 402 or CSSP 402), or CS 403."
+  },
+  "CS 480": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 401"
+       },
+       {
+        "type": "course",
+        "code": "CSSP 401",
+        "minGrade": "S"
+       }
+      ]
+     },
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "MATH 474",
+        "concurrent": true
+       },
+       {
+        "type": "course",
+        "code": "MATH 475",
+        "concurrent": true
+       }
+      ]
+     }
+    ]
+   },
+   "forText": "(CS 331 or CS 401 or CSSP 401 with min. grade of S) and (MATH 474* or MATH 475*)"
+  },
+  "CS 481": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 401"
+       },
+       {
+        "type": "course",
+        "code": "CSSP 401",
+        "minGrade": "S"
+       }
+      ]
+     },
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "MATH 474",
+        "concurrent": true
+       },
+       {
+        "type": "course",
+        "code": "MATH 475",
+        "concurrent": true
+       }
+      ]
+     }
+    ]
+   },
+   "forText": "(CS 331 or CS 401 or CSSP 401 with min. grade of S) and (MATH 474* or MATH 475*)"
+  },
+  "CS 484": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "MATH 151"
+       },
+       {
+        "type": "course",
+        "code": "MATH 192"
+       },
+       {
+        "type": "course",
+        "code": "STAT 225"
+       },
+       {
+        "type": "course",
+        "code": "BUS 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 203"
+       }
+      ]
+     },
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 116"
+       },
+       {
+        "type": "course",
+        "code": "CS 201"
+       },
+       {
+        "type": "course",
+        "code": "CS 401"
+       },
+       {
+        "type": "course",
+        "code": "ITM 311"
+       }
+      ]
+     }
+    ]
+   },
+   "forText": "MATH 151 or MATH 192 or STAT 225 or BUS 221 or PSYC 203 and CS 116 or CS 201 or CS 401 or ITM 311",
+   "note": "The catalog text has no parentheses. Stored as: (MATH 151 or MATH 192 or STAT 225 or BUS 221 or PSYC 203) and (CS 116 or CS 201 or CS 401 or ITM 311)."
+  },
+  "CS 487": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "CS 331"
+       },
+       {
+        "type": "course",
+        "code": "CS 401"
+       },
+       {
+        "type": "course",
+        "code": "CSSP 401",
+        "minGrade": "S"
+       },
+       {
+        "type": "course",
+        "code": "CS 403"
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "CS 425"
+     }
+    ]
+   },
+   "forText": "(CS 331 or CS 401 or CSSP 401 with min. grade of S or CS 403) and CS 425"
+  },
+  "CS 491": {
+   "prereq": {
+    "type": "text",
+    "text": "Instructor permission"
+   },
+   "forText": "Instructor permission required."
+  },
+  "HUM 100": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HUM 102": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "COM 111"
+     },
+     {
+      "type": "course",
+      "code": "COM 101"
+     },
+     {
+      "type": "text",
+      "text": "IIT Communication Placement score of 102, or qualifying ACT, SAT, or writing test scores"
+     }
+    ]
+   },
+   "forText": "IIT Communication Placement score of 102, COM 111, COM 101, or qualifying ACT, SAT, or writing test scores"
+  },
+  "HUM 103": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HUM 104": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "COM 101"
+     },
+     {
+      "type": "course",
+      "code": "COM 111"
+     },
+     {
+      "type": "text",
+      "text": "IIT Communication Placement score of 102, or qualifying ACT, SAT, or writing test scores"
+     }
+    ]
+   },
+   "forText": "COM 101, COM 111, IIT Communication Placement score of 102, or qualifying ACT, SAT, or writing test scores"
+  },
+  "HUM 106": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "COM 101"
+     },
+     {
+      "type": "course",
+      "code": "COM 111"
+     },
+     {
+      "type": "text",
+      "text": "IIT Communication Placement score of 102, or qualifying ACT, SAT, or writing test scores"
+     }
+    ]
+   },
+   "forText": "COM 101, COM 111, IIT Communication Placement score of 102, or qualifying ACT, SAT, or writing test scores"
+  },
+  "HUM 108": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HUM 180": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HUM 202": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HUM 204": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "COM 101"
+     },
+     {
+      "type": "course",
+      "code": "COM 111"
+     },
+     {
+      "type": "text",
+      "text": "IIT Communication Placement score of 102"
+     }
+    ]
+   },
+   "forText": "COM 101, COM 111, or IIT Communication Placement score of 102"
+  },
+  "HUM 206": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "COM 101"
+     },
+     {
+      "type": "course",
+      "code": "COM 111"
+     },
+     {
+      "type": "text",
+      "text": "IIT Communication Placement score of 102"
+     }
+    ]
+   },
+   "forText": "COM 101, COM 111, or IIT Communication Placement score of 102"
+  },
+  "HUM 380": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HUM 395": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HUM 491": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 101": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HIST 103": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HIST 104": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HIST 105": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HIST 106": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "HIST 252": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 253": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 254": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 271": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 273": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 280": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 103"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     }
+    ]
+   },
+   "forText": "HUM 180 or HUM 102-108"
+  },
+  "HIST 380": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "HIST 491": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 204": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 206": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 208": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 211": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 235": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "PHIL 257": {
+   "prereq": {
+    "type": "text",
+    "text": "Any HUM 200-299 course (may be taken at the same time)"
+   },
+   "forText": "HUM 200-299 (may be taken concurrently)"
+  },
+  "PHIL 260": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 272": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 280": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 281": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 282": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 285": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 330": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 331": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "HUM 102",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "HUM 104",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "HUM 106",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "HUM 108",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "HUM 180",
+      "concurrent": true
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course (may be taken at the same time)"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course (may be taken concurrently)"
+  },
+  "PHIL 342": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 380": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PHIL 491": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "LIT 207": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "LIT 211": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "LIT 280": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 103"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     }
+    ]
+   },
+   "forText": "HUM 180 or HUM 100-110"
+  },
+  "LIT 380": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "LIT 411": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "LIT 491": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "AAH 119": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "AAH 120": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "AAH 201": {
+   "prereq": {
+    "type": "text",
+    "text": "Basic Writing Proficiency Requirement"
+   },
+   "forText": "Satisfaction of IIT's Basic Writing Proficiency Requirement"
+  },
+  "AAH 380": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "AAH 491": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PSYC 106": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "course",
+      "code": "PSYC 102"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 103"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 104"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 105"
+     }
+    ]
+   },
+   "forText": "PSYC 102, 103, 104, and 105"
+  },
+  "PSYC 409": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "PSYC 203"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 221"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 301"
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "PSYC 203 or PSYC 221 or PSYC 301, or Graduate standing"
+  },
+  "PSYC 436": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 303"
+       }
+      ]
+     },
+     {
+      "type": "course",
+      "code": "PSYC 301"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 310"
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "(PSYC 221 and PSYC 303) or PSYC 301 or PSYC 310, or Graduate standing"
+  },
+  "PSYC 449": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "course",
+      "code": "SOC 480"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 412",
+      "concurrent": true
+     },
+     {
+      "type": "course",
+      "code": "PSYC 411"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 410"
+     }
+    ]
+   },
+   "forText": "SOC 480, PSYC 412 (may be taken concurrently), PSYC 411, and PSYC 410"
+  },
+  "PSYC 450": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "PSYC 301"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 310"
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "PSYC 301 or PSYC 310, or Graduate standing"
+  },
+  "PSYC 455": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "PSYC 221"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 301"
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "PSYC 221 or PSYC 301, or Graduate standing"
+  },
+  "PSYC 481": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 301"
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "(PSYC 221 and PSYC 301), or Graduate standing"
+  },
+  "PSYC 482": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 204"
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "(PSYC 221 and PSYC 204), or Graduate standing"
+  },
+  "PSYC 483": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 222"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 204"
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "(PSYC 221, PSYC 222, and PSYC 204), or Graduate standing"
+  },
+  "PSYC 487": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "or",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 203"
+       },
+       {
+        "type": "text",
+        "text": "Graduate standing"
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "text": "21 credit hours in psychology"
+     }
+    ]
+   },
+   "forText": "PSYC 203 or Graduate standing; requires 21 credit hours in psychology"
+  },
+  "PSYC 488": {
+   "prereq": {
+    "type": "text",
+    "text": "24 credit hours in psychology"
+   },
+   "forText": "Requires 24 credit hours in psychology"
+  },
+  "PSYC 489": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "and",
+      "children": [
+       {
+        "type": "course",
+        "code": "PSYC 221"
+       },
+       {
+        "type": "course",
+        "code": "PSYC 204"
+       }
+      ]
+     },
+     {
+      "type": "text",
+      "text": "Graduate standing"
+     }
+    ]
+   },
+   "forText": "(PSYC 221 and PSYC 204), or Graduate standing"
+  },
+  "PS 213": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 217": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 229": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 233": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 251": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 254": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 260": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 272": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 274": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 288": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "PS 491": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "text",
+      "text": "Any PS 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any PS 190-299 course"
+     }
+    ]
+   },
+   "forText": "PS 300-399 and PS 190-299"
+  },
+  "PS 497": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "text",
+      "text": "Any PS 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any PS 190-299 course"
+     }
+    ]
+   },
+   "forText": "PS 300-399 and PS 190-299"
+  },
+  "SOC 201": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 202": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 205": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 248": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 262": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 286": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "HUM 100"
+     },
+     {
+      "type": "course",
+      "code": "HUM 102"
+     },
+     {
+      "type": "course",
+      "code": "HUM 104"
+     },
+     {
+      "type": "course",
+      "code": "HUM 106"
+     },
+     {
+      "type": "course",
+      "code": "HUM 108"
+     },
+     {
+      "type": "course",
+      "code": "HUM 180"
+     },
+     {
+      "type": "text",
+      "text": "Any HUM 200-299 course"
+     }
+    ]
+   },
+   "forText": "HUM 100, 102, 104, 106, 108, or 180, or any HUM 200-299 course"
+  },
+  "SOC 491": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "text",
+      "text": "Any SOC 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any SOC 190-299 course"
+     }
+    ]
+   },
+   "forText": "SOC 300-399 and SOC 190-299"
+  },
+  "SOC 497": {
+   "prereq": {
+    "type": "and",
+    "children": [
+     {
+      "type": "text",
+      "text": "Any SOC 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any SOC 190-299 course"
+     }
+    ]
+   },
+   "forText": "SOC 300-399 and SOC 190-299"
+  },
+  "SSCI 325": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "course",
+      "code": "SSCI 225"
+     },
+     {
+      "type": "text",
+      "text": "Any DS 151-261 course"
+     },
+     {
+      "type": "text",
+      "text": "Any CS 104-201 course"
+     },
+     {
+      "type": "course",
+      "code": "PSYC 203"
+     }
+    ]
+   },
+   "forText": "SSCI 225 or DS 151-261 or CS 104-201 or PSYC 203"
+  },
+  "SSCI 486": {
+   "prereq": {
+    "type": "or",
+    "children": [
+     {
+      "type": "text",
+      "text": "Any SSCI 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any PS 300-399 course"
+     },
+     {
+      "type": "text",
+      "text": "Any SOC 300-399 course"
+     }
+    ]
+   },
+   "forText": "SSCI 300-399 or PS 300-399 or SOC 300-399"
+  }
+ },
+ "semester": "Spring 2027",
+ "termCode": "202720"
+}
