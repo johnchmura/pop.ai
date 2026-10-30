@@ -285,6 +285,8 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       if (!spec) continue;
       const credits = Number(it.credits) || 3;
       it.suggestions = pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests, major });
+      // the course the plan picked for this requirement comes first
+      if (it.recommended) it.suggestions = [it.recommended, ...it.suggestions.filter((c) => c !== it.recommended)].slice(0, 3);
       matches(it, it.suggestions);
       it.suggestions.forEach((c) => usedHere.add(c));
     }
@@ -293,6 +295,29 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
   for (const term of view.terms) run(term.items, term.key || '', term.label || '');
   if (view.later?.length) run(view.later, '');
   oneStarEach([...view.terms.flatMap((t) => t.items), ...(view.later || [])]);
+  return view;
+}
+
+/**
+ * Only required courses (and courses the student named in the chat) show as a single course in the
+ * plan. Any other pick (a CS elective, a course from a list) shows as the requirement it fills, with
+ * the picked course as the first recommendation. Changes the view in place.
+ *   mentioned: Set of course codes the student named
+ */
+export function slotifyChoices(view, mentioned = new Set()) {
+  for (const it of [...(view?.terms || []).flatMap((t) => t.items), ...(view?.later || [])]) {
+    if (!it.code || mentioned.has(it.code)) continue;
+    // a pick that another required course needs first ("Also opens CS 485") is as good as required
+    const opensRequired = /Also opens|Needed before/.test(it.reason || '') && it.kind === 'choice';
+    if (!(it.kind === 'elective' || (it.kind === 'choice' && !opensRequired))) continue;
+    const alts = (it.options || []).filter((c) => c !== it.code);
+    it.recommended = it.code;
+    it.label = it.kind === 'elective' ? 'CS elective' : (it.requirement || it.label || 'Elective');
+    it.options = alts.length ? [it.code, ...alts] : [];
+    it.code = null;
+    it.title = '';
+    it.kind = 'placeholder';
+  }
   return view;
 }
 

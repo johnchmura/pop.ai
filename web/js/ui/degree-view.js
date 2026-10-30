@@ -6,7 +6,7 @@ import { parseTranscriptText, linesFromPdfItems, gradeStatus, cleanRecords, best
 import { auditDegree } from '../core/audit.js';
 import { planSemesters, planInputs, describePlan, repackPlan } from '../core/planner.js';
 import { checkPlan } from '../core/plan-check.js';
-import { addSuggestions } from '../core/suggest.js';
+import { addSuggestions, slotifyChoices } from '../core/suggest.js';
 import { normalizeCode } from '../core/prereq.js';
 import { esc } from './util.js';
 
@@ -206,7 +206,9 @@ export function renderDegree(el, ctx) {
   const ruleView = describePlan(rule, audit, { maxCredits });
   // real courses that fit each open slot (Core Curriculum, electives), shown under the slot
   const suggestCtx = { index, program, audit, done: inputs.done, grades, interests: ctx.interests || null, majorKnown: !!transcript.programId };
-  addSuggestions(ruleView, suggestCtx);
+  // only required courses, or courses the student named, show as one course; other picks show the requirement
+  const mentioned = new Set(ctx.interests?.codes ? [...ctx.interests.codes.keys()] : []);
+  addSuggestions(slotifyChoices(ruleView, mentioned), suggestCtx);
   const titleOf = (code) => index.get(code)?.title || '';
   // Add buttons only in the term the sections are for (the schedule semester)
   const addFor = (term) => (term.label === index.semester && ctx.addButton ? (code) => (code ? ctx.addButton(code) : '') : () => '');
@@ -218,7 +220,7 @@ export function renderDegree(el, ctx) {
   const aiView = useAi && (p.ai.maxCredits || 15) !== maxCredits
     ? repackPlan(JSON.parse(JSON.stringify(p.ai)), { index, program, done: inputs.done, grades, maxCredits, locked: inputs.locked })
     : useAi ? JSON.parse(JSON.stringify(p.ai)) : null;
-  const shown = useAi ? addSuggestions(aiView, suggestCtx) : ruleView;
+  const shown = useAi ? addSuggestions(slotifyChoices(aiView, mentioned), suggestCtx) : ruleView;
   const check = checkPlan(shown, { index, program, records: transcript.courses, done: inputs.done, grades, maxCredits, waivers });
   const t = audit.totals;
   const pct = (n) => `${Math.max(0, Math.min(100, (n / t.required) * 100)).toFixed(1)}%`;

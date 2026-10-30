@@ -185,3 +185,17 @@ test('one star per slot, and a starred course is starred and suggested in one sl
   const sugg = items.flatMap((i) => i.suggestions || []);
   for (const c of stars) assert.equal(sugg.filter((x) => x === c).length, 1, `${c} suggested more than once`);
 });
+
+test('only required courses (or ones the student named) show as one course; other picks show the requirement', async () => {
+  const { slotifyChoices } = await import('../js/core/suggest.js');
+  const program = programs.find((p) => p.id === 'bs-cs');
+  const { audit, inputs, grades } = planFor(program, sample.courses);
+  const make = (mentioned) => addSuggestions(slotifyChoices(describePlan(planSemesters(audit, program, index, { ...inputs, grades }), audit), new Set(mentioned)), { index, program, audit, done: inputs.done, grades });
+  const items = make([]).terms.flatMap((t) => t.items);
+  for (const i of items) if (i.code) assert.ok(['required', 'saved'].includes(i.kind) || /Also opens|Needed before/.test(i.reason || ''), `${i.code} (${i.kind}) shown as a single course`);
+  const cs = items.find((i) => i.label === 'CS elective');
+  assert.ok(cs && cs.recommended && cs.suggestions[0] === cs.recommended, 'the picked elective is the first recommendation');
+  // a course the student named stays as a course
+  const named = make([cs.recommended]).terms.flatMap((t) => t.items);
+  assert.ok(named.some((i) => i.code === cs.recommended));
+});
