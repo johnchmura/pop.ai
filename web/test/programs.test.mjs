@@ -167,3 +167,18 @@ test('a minor is found from the courses and counted automatically (three ECON co
   assert.ok(items.some((i) => i.label === 'ECON minor course'));
   assert.ok(items.every((i) => i.code || i.credits >= 2));
 });
+
+test('a requirement met by its courses needs no extra credits (3-credit AP for a 4-credit physics course)', async () => {
+  const { neededItems } = await import('../js/core/planner.js');
+  const cs = programs.find((p) => p.id === 'bs-cs');
+  const rec = (code, credits, grade) => ({ code, title: '', credits, grade, term: 'Fall 2024', status: 'completed', transfer: grade === 'TR' });
+  const audit = auditDegree(cs, [rec('PHYS 123', 3, 'TR'), rec('PHYS 221', 4, 'A')], { index, planned: [] });
+  const sci = audit.groups.find((g) => g.id === 'science-core');
+  assert.equal(sci.status, 'done');
+  assert.equal(sci.creditsLeft, 0);
+  assert.equal(sci.creditGap, 1);
+  assert.ok(!neededItems(audit, cs, index).some((i) => i.group === 'science-core'));
+  // the 1 credit is not added to what is left of the degree
+  const full = auditDegree(cs, [rec('PHYS 123', 4, 'TR'), rec('PHYS 221', 4, 'A')], { index, planned: [] });
+  assert.equal(audit.totals.remaining, full.totals.remaining);
+});

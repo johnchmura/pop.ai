@@ -338,9 +338,9 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
     else if (group.type === 'hss') result = auditHss(group, view);
     else result = auditFree(group, view);
 
-    const done = sumBy(result.used, 'completed');
-    const ip = sumBy(result.used, 'in-progress');
-    const pl = sumBy(result.used, 'planned');
+    let done = sumBy(result.used, 'completed');
+    let ip = sumBy(result.used, 'in-progress');
+    let pl = sumBy(result.used, 'planned');
     let status = groupStatus(group.credits, done, ip, pl);
     // "all" and "hss" groups are about specific courses, not only credits
     if (group.type === 'all') {
@@ -354,6 +354,14 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
     if (group.count) {
       const n = result.used.length;
       if (n < group.count) status = 'remaining';
+    }
+    // a requirement met by its courses is met, even when a course is worth fewer credits than the
+    // catalog lists (a 3-credit AP or transfer course for a 4-credit PHYS 123): no extra credits
+    let creditGap = 0;
+    const byCourses = group.type === 'all' || group.type === 'hss' || !!group.count;
+    if (byCourses && status !== 'remaining' && done + ip + pl < group.credits) {
+      creditGap = group.credits - done - ip - pl;
+      if (status === 'done') done += creditGap; else if (status === 'in-progress') ip += creditGap; else pl += creditGap;
     }
     const creditsLeft = Math.max(0, group.credits - done - ip - pl);
     if (waived.has(group.id)) {
@@ -379,6 +387,7 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
       parts: result.parts ? result.parts.map((p) => ({ id: p.id, label: p.label, need: p.need, have: p.have.map((h) => h.code), problem: p.problem || '' })) : null,
       minorSubject,
       double,
+      creditGap,
       sharedCode: minorSubject && double && (double.completed || double['in-progress'] || double.planned) ? sharedCode : '',
     };
   }

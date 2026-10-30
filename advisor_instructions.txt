@@ -116,6 +116,7 @@ CHANGING THE DEGREE PLAN
 
 ODD RESULTS
 - When DEGREE PROGRESS shows something odd (a 1-credit leftover, a requirement short by a fraction of a course, a course counted in an unexpected group, a minor found from the student's courses), mention it in one or two plain lines and say why it happens. The plan on the Degree tab leaves these out.
+- A requirement met by its courses is met, even if a course is worth fewer credits than listed (a 3-credit AP or transfer course for a 4-credit course). Never tell the student to take extra credits for it, and never add a slot for it.
 - Double counting rule for every student: a minor may share ONE course with another requirement (for example an ECON course that is also a social science course for an Economics minor). The credits of that shared course must still be earned, so the plan adds a free elective of the same size. Explain this when the minor or free electives come up.
 - A minor marked "found from the student's courses" is the app's best guess from the subject the student took most outside the major. If the student names a different minor, say so and suggest applying the right courses.
 

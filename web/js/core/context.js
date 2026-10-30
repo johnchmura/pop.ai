@@ -259,6 +259,11 @@ export function degreeBlock(index, ctx, programs) {
     const minor = g.minorSubject ? ` (minor in ${g.minorSubject}, found from the student's ${g.minorSubject} courses${g.sharedCode ? `; shares ${g.sharedCode} with another requirement, the one course a minor may share, so a free elective makes up its credits` : ''})` : '';
     lines.push(`- ${g.name}${minor}: ${g.status}, ${g.done + g.inProgress + g.planned}/${g.credits} credits${g.courses.length ? ` [${g.courses.map((c) => c.code).join(', ')}]` : ''}${g.remaining.length ? `. Still needed: ${g.remaining.join('; ')}` : ''}`);
   }
+  const gaps = audit.groups.filter((g) => g.creditGap);
+  if (gaps.length) {
+    lines.push('Requirements met by their courses with fewer credits than listed (no extra credits needed; mention this if the student asks about credits):');
+    for (const g of gaps) lines.push(`  - ${g.name}: met, ${g.creditGap} credit${g.creditGap === 1 ? '' : 's'} under the listed total (for example a 3-credit AP or transfer course for a 4-credit course)`);
+  }
   if (plan.outliers?.length) {
     lines.push('Small leftovers the plan leaves out (not real courses; mention them briefly when the plan or what is left comes up, and say why they happen, for example a 2-credit or transfer course that left a 1-credit gap; suggest confirming with the adviser):');
     for (const o of plan.outliers) lines.push(`  - ${o.group}: ${o.credits} credit${o.credits === 1 ? '' : 's'} short`);
