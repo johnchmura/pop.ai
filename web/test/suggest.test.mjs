@@ -192,7 +192,7 @@ test('only required courses (or ones the student named) show as one course; othe
   const { audit, inputs, grades } = planFor(program, sample.courses);
   const make = (mentioned) => addSuggestions(slotifyChoices(describePlan(planSemesters(audit, program, index, { ...inputs, grades }), audit), new Set(mentioned)), { index, program, audit, done: inputs.done, grades });
   const items = make([]).terms.flatMap((t) => t.items);
-  for (const i of items) if (i.code) assert.ok(['required', 'saved'].includes(i.kind) || /Also opens|Needed before/.test(i.reason || ''), `${i.code} (${i.kind}) shown as a single course`);
+  for (const i of items) if (i.code) assert.ok(['required', 'saved'].includes(i.kind), `${i.code} (${i.kind}) shown as a single course`);
   const cs = items.find((i) => i.label === 'CS elective');
   assert.ok(cs && cs.recommended && cs.suggestions[0] === cs.recommended, 'the picked elective is the first recommendation');
   // a course the student named stays as a course

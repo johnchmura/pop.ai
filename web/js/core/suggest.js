@@ -304,16 +304,20 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
  * the picked course as the first recommendation. Changes the view in place.
  *   mentioned: Set of course codes the student named
  */
-export function slotifyChoices(view, mentioned = new Set()) {
+export function slotifyChoices(view, mentioned = new Set(), index = null) {
   for (const it of [...(view?.terms || []).flatMap((t) => t.items), ...(view?.later || [])]) {
     if (!it.code || mentioned.has(it.code)) continue;
-    // a pick that another required course needs first ("Also opens CS 485") is as good as required
-    const opensRequired = /Also opens|Needed before/.test(it.reason || '') && it.kind === 'choice';
-    if (!(it.kind === 'elective' || (it.kind === 'choice' && !opensRequired))) continue;
-    const alts = (it.options || []).filter((c) => c !== it.code);
+    if (!(it.kind === 'elective' || it.kind === 'choice')) continue;
+    let alts = (it.options || []).filter((c) => c !== it.code);
+    // a pick a required course needs first ("Also opens CS 485"): list only options that also open it
+    const opens = [...String(it.reason || '').matchAll(/(?:Also opens|Needed before) ([^.]+)/g)].flatMap((m) => m[1].match(/[A-Z]{2,4} \d{3}/g) || []);
+    if (opens.length && index) {
+      const leaves = new Set(opens.flatMap((c) => courseLeaves(index.get?.(c)?.prereq).map((l) => l.code)));
+      alts = alts.filter((c) => leaves.has(c));
+    }
     it.recommended = it.code;
     it.label = it.kind === 'elective' ? 'CS elective' : (it.requirement || it.label || 'Elective');
-    it.options = alts.length ? [it.code, ...alts] : [];
+    it.options = alts.length || opens.length ? [it.code, ...alts] : []; // when a required course needs this pick, only its options are listed
     it.code = null;
     it.title = '';
     it.kind = 'placeholder';
