@@ -21,7 +21,7 @@ export function renderGraph({ index, focus, options, completed, planned, els, se
     els.focus.innerHTML = '';
     els.scroll.innerHTML = `<div class="graph-empty">
         <p>Search for a course to see its prerequisites and what it unlocks.</p>
-        <div class="seg">${(suggestions.length ? suggestions : ['CS 331', 'MATH 251', 'CS 480']).map((c) => `<button type="button" data-search="${esc(c)}" title="${esc(index.get(c)?.title || '')}">${esc(c)}</button>`).join('')}</div>
+        <div class="seg">${(suggestions.length ? suggestions : ['CS 331', 'MATH 251', 'CS 480', 'CS 115', 'MATH 151'].filter((c) => index.get(c)?.sections?.length).slice(0, 3)).map((c) => `<button type="button" data-search="${esc(c)}" title="${esc(index.get(c)?.title || '')}">${esc(c)}</button>`).join('')}</div>
       </div>`;
     els.detail.hidden = true;
     return;

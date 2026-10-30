@@ -196,6 +196,19 @@ function pickFor(index, spec, { credits, termKey, termLabel, finished, current, 
   return chosen.map((c) => c.code);
 }
 
+/**
+ * Is a course offered in a plan term? The schedule semester needs sections. Later terms need the CS
+ * department forecast, or sections now (IIT does not publish later schedules for other subjects).
+ */
+export function isOffered(index, code, termKey, termLabel) {
+  const c = index.get?.(code);
+  if (!c) return false;
+  if (termLabel === index.semester) return c.sections.length > 0;
+  const f = termKey ? offeredIn(index.forecast, code, termKey) : null;
+  if (f === false) return false;
+  return f === true || c.sections.length > 0;
+}
+
 /** The program group an open slot belongs to. */
 function groupForItem(item, program) {
   const req = item.requirement || item.groupName || '';
@@ -255,6 +268,8 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       it.suggestions = [];
       it.chatMatches = [];
       it.majorMatches = [];
+      // option lists ("Pick one", "Or") keep only courses that are offered that term
+      if (it.options?.length && termLabel) it.options = it.options.filter((c) => isOffered(index, c, termKey, termLabel));
       if (!it.code && it.options?.length) {
         // a slot that lists its options: the ones from the chat go first, then the ones related to the major
         const score = (c) => { const course = index.get?.(c); return course ? interestScore(course, interests) * 10 + interestScore(course, major) : 0; };

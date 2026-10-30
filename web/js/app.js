@@ -598,9 +598,10 @@ function graphFocus() {
 /** Graph tab with nothing searched: courses from the student's major that are next (not done, offered now). */
 function graphSuggestions() {
   const program = state.programs.find((p) => p.id === state.transcript?.programId);
-  if (!program) return [];
   const done = completedSet();
   const offered = (c) => state.index.get(c)?.sections?.length;
+  // no major: a few common courses, only the ones offered this semester
+  if (!program) return ['CS 331', 'MATH 251', 'CS 480', 'CS 115', 'MATH 151', 'PHYS 123'].filter((c) => offered(c) && !done.has(c)).slice(0, 4);
   const out = [];
   // the plan on the Degree tab, in order (it already skips what is done or covered)
   for (const t of lastDegree?.shown?.terms || []) {

@@ -162,3 +162,11 @@ test('courses related to the major get a star too (History of AI for an AI major
     assert.match(`${c.title} ${c.description}`, /artificial intelligence|\bA\.?I\b/i, code);
   }
 });
+
+test('option lists keep only courses offered that term', async () => {
+  const { isOffered } = await import('../js/core/suggest.js');
+  for (const program of programs.slice(0, 12)) {
+    const { view } = planFor(program, sample.courses);
+    for (const term of view.terms) for (const it of term.items) for (const c of it.options || []) assert.ok(isOffered(index, c, term.key, term.label), `${c} in ${term.label}`);
+  }
+});
