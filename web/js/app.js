@@ -15,6 +15,7 @@ import { cleanCommitments, sectionClashes, applyMemoryOps } from './core/commitm
 import { resolveProposal, applyChange, changesForServer } from './core/changes.js';
 import { studentContextBlock, readClientContext } from './core/context.js';
 import { offlineAnswer } from './core/offline.js';
+import { chatInterests } from './core/interests.js';
 import { rulePlan, planTask, planUserText, finishAdvisorPlan } from './core/plan-ai.js';
 
 // ---------- state ----------
@@ -449,6 +450,7 @@ function renderDegreeTab() {
     known,
     addButton: addCourseButton,
     hasClaude: state.health?.mode === 'claude',
+    interests: chatInterests(store.get('chat', [])), // suggested courses follow what the chat discussed
     plan: { ...state.plan, aiStale: !!state.plan.ai && state.plan.aiFingerprint !== planFingerprint() },
   });
 }
@@ -529,12 +531,10 @@ function applyMemory(ops) {
 
 // ---------- tabs ----------
 let scheduleLayout = null;
-let tabBeforeGraph = 'degree';
 function setTab(tab) {
   if (!['schedule', 'chat', 'graph', 'degree'].includes(tab)) tab = 'degree';
-  if (tab === 'graph' && state.tab !== 'graph') tabBeforeGraph = state.tab;
   state.tab = tab;
-  if (tab !== 'graph') store.set('tab', tab); // the graph is a view of a course, not a home tab
+  store.set('tab', tab);
   for (const t of $$('.tab')) {
     const on = t.dataset.tab === tab;
     t.setAttribute('aria-selected', String(on));
@@ -824,6 +824,7 @@ async function start() {
   els.filtersCount.textContent = n;
 
   chat = createChat({
+    onChange: () => renderDegreeTab(), // suggested courses follow the chat
     els: {
       log: $('#chat-log'), form: $('#chat-form'), input: $('#chat-input'), send: $('#chat-send'),
       clear: $('#chat-clear'), mode: $('#mode-badge'),
@@ -897,7 +898,6 @@ async function start() {
     if (known(code) && !state.graphFilter.includes(code)) { state.graphSelected = null; setGraphFilter([...state.graphFilter, code]); }
   });
   $('#graph-clear').addEventListener('click', () => setGraphFilter([]));
-  $('#graph-back').addEventListener('click', () => setTab(tabBeforeGraph));
   $('#graph-focus').addEventListener('click', (e) => {
     const r = e.target.closest('[data-unfilter]');
     if (r) setGraphFilter(state.graphFilter.filter((c) => c !== r.dataset.unfilter));

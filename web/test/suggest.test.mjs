@@ -103,3 +103,29 @@ test('CS student: Core Curriculum slots get real courses', () => {
   if (ipro) assert.deepEqual(ipro.suggestions, ['IPRO 497', 'IPRO 397']);
   assert.ok(open.some((i) => i.suggestions.length), 'at least one open slot has suggestions');
 });
+
+test('suggested courses follow what the chat discussed', async () => {
+  const { chatInterests } = await import('../js/core/interests.js');
+  const program = programs.find((p) => p.id === 'bs-cs');
+  const base = planFor(program, sample.courses);
+  const slot = (view) => view.terms.flatMap((t) => t.items).find((i) => /social science \(S\)/i.test(i.label || ''));
+  assert.ok(slot(base.view)?.suggestions?.length, 'the sample plan has a social science slot');
+  // the student says what interests them; the advisor names a course
+  const chat = [
+    { role: 'user', content: 'I am really into psychology and how people make decisions.' },
+    { role: 'assistant', content: 'PSYC 221 could be a good fit.' },
+  ];
+  const interests = chatInterests(chat);
+  assert.ok(interests.codes.has('PSYC 221') && interests.words.has('psychology'));
+  const { audit, inputs, grades } = base;
+  const best = bestAttempts(sample.courses);
+  const completed = new Set(best.filter((r) => r.status === 'completed').map((r) => r.code));
+  const inProgress = new Set(best.filter((r) => r.status === 'in-progress').map((r) => r.code));
+  const view = describePlan(planSemesters(audit, program, index, { ...planInputs(index, { completed, inProgress, saved: [] }), grades }), audit);
+  addSuggestions(view, { index, program, audit, done: inputs.done, grades, interests });
+  const s = slot(view);
+  assert.ok(s.suggestions[0].startsWith('PSYC'), `got ${s.suggestions.join(', ')}`);
+  assert.ok(s.chatMatches.includes(s.suggestions[0]));
+  // no chat: the old order
+  assert.ok(chatInterests([]).codes.size === 0);
+});

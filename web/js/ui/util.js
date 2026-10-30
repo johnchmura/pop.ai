@@ -21,14 +21,9 @@ export const store = {
   },
 };
 
-/** Subject -> color family used by schedule blocks, saved items, and graph nodes. */
-const FAMILIES = ['blue', 'green', 'violet', 'amber', 'rose', 'teal'];
-const FIXED = { CS: 'lime', MATH: 'sky', ARCH: 'blue' };
-export function colorFamily(subject) {
-  if (FIXED[subject]) return FIXED[subject];
-  let h = 0;
-  for (const ch of String(subject)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return FAMILIES[2 + (h % (FAMILIES.length - 2))];
+/** Every course uses the theme's course color (schedule blocks, saved items, graph nodes). */
+export function colorFamily() {
+  return 'course';
 }
 
 const CODE_IN_TEXT = /\b(?:CS|MATH|ECE|CSSP|STAT|BUS|PSYC|ITM|COM)\s?\d{3}\b/g;

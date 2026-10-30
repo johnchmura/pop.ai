@@ -7,11 +7,7 @@ import { esc, linkCodes, colorFamily } from './util.js';
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 function subjectClass(node) {
-  if (node.external) return 'other external';
-  if (node.subject === 'CS') return 'cs';
-  if (node.subject === 'MATH') return 'math';
-  if (node.subject === 'ARCH') return 'arch';
-  return 'other';
+  return node.external ? 'other external' : 'course';
 }
 
 export function renderGraph({ index, focus, options, completed, planned, els, selected, filtered = false, addButton = () => '' }) {

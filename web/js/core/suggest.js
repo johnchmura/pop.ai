@@ -8,6 +8,7 @@ import { evaluate, courseLeaves } from './prereq.js';
 import { offeredIn } from './forecast.js';
 import { groupForRequirement } from './plan-check.js';
 import { REPEATABLE } from './transcript.js';
+import { interestScore, focusInterests } from './interests.js';
 
 const MAX_PER_SLOT = 3;
 const subjectOf = (code) => code.split(' ')[0];
@@ -119,7 +120,7 @@ function needsSignoff(course) {
  *   usedHere: codes already suggested for other slots (tried last)
  *   fields:   subjects the student already has for a "two or more fields" rule
  */
-function pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home }) {
+function pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home, interests }) {
   const forecast = index.forecast;
   const out = [];
   for (const c of index.list) {
@@ -141,10 +142,14 @@ function pickFor(index, spec, { credits, termKey, finished, current, grades, blo
   }
   const listed = spec.codes || [];
   const prefer = spec.prefer || [];
+  const chat = new Map(out.map((c) => [c.code, interestScore(c, interests)]));
   out.sort((a, b) => {
     // listed order first (for example IPRO 497 before IPRO 397)
     const la = listed.indexOf(a.code); const lb = listed.indexOf(b.code);
     if (la !== lb) return (la < 0 ? 99 : la) - (lb < 0 ? 99 : lb);
+    // what the student talked about in the chat
+    const ia = chat.get(a.code); const ib = chat.get(b.code);
+    if (ia !== ib) return ib - ia;
     // the usual courses for this kind of slot
     const pa = prefer.includes(a.code) ? 0 : 1; const pb = prefer.includes(b.code) ? 0 : 1;
     if (pa !== pb) return pa - pb;
@@ -203,10 +208,12 @@ function groupForItem(item, program) {
 /**
  * Add `suggestions` (course codes) to the open slots of a plan view (the shape describePlan returns,
  * also used for the advisor's plan). Terms must be in time order. Changes the view in place.
- *   ctx: { index, program, audit, done (Set), grades (Map) }
+ *   ctx: { index, program, audit, done (Set), grades (Map), interests (from chatInterests) }
+ * Courses that match the chat come first; they are listed in item.chatMatches.
  */
-export function addSuggestions(view, { index, program, audit, done = new Set(), grades = new Map() }) {
+export function addSuggestions(view, { index, program, audit, done = new Set(), grades = new Map(), interests = null }) {
   if (!view?.terms) return view;
+  interests = interests && focusInterests(interests, index.list);
   const hssGroup = program.groups.find((g) => g.type === 'hss');
   // never suggest a course the student has, has planned, or must take anyway
   const blocked = new Set(done);
@@ -232,6 +239,13 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
     const current = new Set(items.filter((i) => i.code).map((i) => i.code));
     for (const it of items) {
       it.suggestions = [];
+      it.chatMatches = [];
+      if (!it.code && it.options?.length && interests) {
+        // a slot that lists its options: the ones from the chat go first
+        const score = (c) => { const course = index.get?.(c); return course ? interestScore(course, interests) : 0; };
+        it.options = [...it.options].sort((a, b) => score(b) - score(a));
+        it.chatMatches = it.options.filter((c) => score(c) > 0);
+      }
       if (it.code || it.options?.length) continue; // a real course, or a slot that already lists its options
       const group = groupForItem(it, program);
       if (!group || group.type === 'free') continue;
@@ -239,7 +253,8 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       const spec = specFor(group, part, hssGroup);
       if (!spec) continue;
       const credits = Number(it.credits) || 3;
-      it.suggestions = pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home });
+      it.suggestions = pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home, interests });
+      it.chatMatches = it.suggestions.filter((c) => { const course = index.get?.(c); return course && interestScore(course, interests) > 0; });
       it.suggestions.forEach((c) => usedHere.add(c));
     }
     for (const c of current) finished.add(c);

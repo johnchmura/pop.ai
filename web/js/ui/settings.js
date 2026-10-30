@@ -3,16 +3,14 @@
 
 import { store, esc } from './util.js';
 
-const DEFAULTS = { accent: '#3b6fd8', cs: '#a9bf2a', math: '#6aa6e0', arch: '#4f93d6', edge: '#1b365d' };
-const LABELS = { accent: 'Accent (links, focus)', cs: 'CS courses', math: 'MATH courses', arch: 'ARCH courses', edge: 'Graph lines' };
-const BG_DEFAULT = { light: { left: '#ffffff', right: '#f2f2f7' }, dark: { left: '#15171c', right: '#0f1115' } };
+// Each theme sets the accent (links, focus), the course color, and the graph lines.
 const PRESETS = [
-  { name: 'Default', colors: null },
-  { name: 'Ocean', colors: { accent: '#0e7490', cs: '#2bb3a3', math: '#5aa9e6', arch: '#2f6fb5', edge: '#0b3d5c' } },
-  { name: 'Forest', colors: { accent: '#2e7d4f', cs: '#7bb661', math: '#4fb0a0', arch: '#2f7d6d', edge: '#1f4d3a' } },
-  { name: 'Sunset', colors: { accent: '#d9622b', cs: '#e8b339', math: '#f08a6c', arch: '#c9486b', edge: '#6b2d3c' } },
-  { name: 'Violet', colors: { accent: '#7048e8', cs: '#b197fc', math: '#74c0fc', arch: '#9775fa', edge: '#3b2a78' } },
-  { name: 'Mono', colors: { accent: '#333333', cs: '#9aa0a6', math: '#c3c7cc', arch: '#6f757b', edge: '#333333' } },
+  { name: 'Default', colors: { accent: '#3b6fd8', course: '#7f9be0', edge: '#1b365d' } },
+  { name: 'Ocean', colors: { accent: '#0e7490', course: '#3aa6b9', edge: '#0b3d5c' } },
+  { name: 'Forest', colors: { accent: '#2e7d4f', course: '#6fae7f', edge: '#1f4d3a' } },
+  { name: 'Sunset', colors: { accent: '#d9622b', course: '#e8955f', edge: '#6b2d3c' } },
+  { name: 'Violet', colors: { accent: '#7048e8', course: '#9d85f2', edge: '#3b2a78' } },
+  { name: 'Mono', colors: { accent: '#333333', course: '#9aa0a6', edge: '#333333' } },
 ];
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -33,8 +31,9 @@ export function createSettings({ button, menu, onChange }) {
   const root = document.documentElement;
   let theme = store.get('theme', 'system');
   if (!['light', 'dark', 'system'].includes(theme)) theme = 'system';
-  let colors = (() => { const c = store.get('colors', {}); const out = {}; for (const k of Object.keys(DEFAULTS)) if (HEX.test(c?.[k] || '')) out[k] = c[k]; return out; })();
-  let bg = (() => { const c = store.get('panelColors', {}); const out = { light: {}, dark: {} }; for (const m of ['light', 'dark']) for (const k of ['left', 'right']) if (HEX.test(c?.[m]?.[k] || '')) out[m][k] = c[m][k]; return out; })();
+  let presetName = store.get('colorTheme', 'Default');
+  if (!PRESETS.some((p) => p.name === presetName)) presetName = 'Default';
+  const colors = () => PRESETS.find((p) => p.name === presetName).colors;
 
   const effective = () => {
     if (theme === 'light' || theme === 'dark') return theme;
@@ -46,24 +45,18 @@ export function createSettings({ button, menu, onChange }) {
     const mode = effective();
     const dark = mode === 'dark';
     const set = (name, value) => (value ? root.style.setProperty(name, value) : root.style.removeProperty(name));
-    set('--focus', colors.accent);
-    for (const [key, prefix] of [['cs', 'lime'], ['math', 'sky'], ['arch', 'blue']]) {
-      const s = colors[key] ? shades(colors[key], dark) : null;
-      set(`--${prefix}-bg`, s?.bg); set(`--${prefix}-border`, s?.border); set(`--${prefix}-text`, s?.text); set(`--${prefix}-sub`, s?.sub);
-    }
-    set('--edge', colors.edge ? (dark ? mix(colors.edge, '#ffffff', 0.55) : colors.edge) : '');
-    set('--left-bg', bg[mode].left);
-    set('--right-bg', bg[mode].right);
-    set('--page', bg[mode].right ? mix(bg[mode].right, dark ? '#000000' : '#000000', dark ? 0.2 : 0.04) : '');
+    const c = colors();
+    set('--focus', c.accent);
+    const sh = shades(c.course, dark);
+    set('--course-bg', sh.bg); set('--course-border', sh.border); set('--course-text', sh.text); set('--course-sub', sh.sub);
+    set('--edge', dark ? mix(c.edge, '#ffffff', 0.55) : c.edge);
     button.setAttribute('aria-label', 'Settings');
     onChange?.();
   }
 
-  const save = () => { store.set('theme', theme); store.set('colors', colors); store.set('panelColors', bg); };
+  const save = () => { store.set('theme', theme); store.set('colorTheme', presetName); };
 
   function render() {
-    const mode = effective();
-    const val = (k) => colors[k] || DEFAULTS[k];
     menu.innerHTML = `
       <h2 class="set-title">Settings</h2>
       <fieldset class="set-group"><legend>Mode</legend>
@@ -71,20 +64,11 @@ export function createSettings({ button, menu, onChange }) {
           ${['light', 'dark', 'system'].map((t) => `<button type="button" role="radio" aria-checked="${theme === t}" data-mode="${t}">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('')}
         </div>
       </fieldset>
-      <fieldset class="set-group"><legend>Color themes</legend>
-        <div class="set-presets">
-          ${PRESETS.map((p) => {
-            const c = p.colors || DEFAULTS;
-            return `<button type="button" class="preset" data-preset="${esc(p.name)}" title="${esc(p.name)}"><span class="sw"><i style="background:${c.cs}"></i><i style="background:${c.math}"></i><i style="background:${c.arch}"></i></span>${esc(p.name)}</button>`;
-          }).join('')}
+      <fieldset class="set-group"><legend>Theme</legend>
+        <div class="set-presets" role="radiogroup" aria-label="Theme">
+          ${PRESETS.map((p) => `<button type="button" class="preset" role="radio" aria-checked="${p.name === presetName}" data-preset="${esc(p.name)}"><span class="sw"><i style="background:${p.colors.accent}"></i><i style="background:${p.colors.course}"></i></span>${esc(p.name)}</button>`).join('')}
         </div>
-      </fieldset>
-      <fieldset class="set-group"><legend>Colors</legend>
-        ${Object.keys(DEFAULTS).map((k) => `<label class="set-row"><span>${esc(LABELS[k])}</span><span class="set-pick"><input type="color" data-color="${k}" value="${val(k)}" aria-label="${esc(LABELS[k])}"></span></label>`).join('')}
-        <label class="set-row"><span>Left panel (${mode})</span><span class="set-pick"><input type="color" data-bg="left" value="${bg[mode].left || BG_DEFAULT[mode].left}" aria-label="left panel"></span></label>
-        <label class="set-row"><span>Right panel (${mode})</span><span class="set-pick"><input type="color" data-bg="right" value="${bg[mode].right || BG_DEFAULT[mode].right}" aria-label="right panel"></span></label>
-      </fieldset>
-      <button type="button" class="btn" data-reset>Reset colors</button>`;
+      </fieldset>`;
   }
 
   const open = () => { render(); menu.hidden = false; button.setAttribute('aria-expanded', 'true'); };
@@ -101,20 +85,7 @@ export function createSettings({ button, menu, onChange }) {
     const t = e.target.closest('[data-mode]');
     if (t && menu.contains(t)) { theme = t.dataset.mode; save(); apply(); render(); return; }
     const p = e.target.closest('[data-preset]');
-    if (p) { const preset = PRESETS.find((x) => x.name === p.dataset.preset); colors = preset?.colors ? { ...preset.colors } : {}; save(); apply(); render(); return; }
-    if (e.target.closest('[data-reset]')) { colors = {}; bg = { light: {}, dark: {} }; save(); apply(); render(); }
-  });
-  // live update while a color picker is dragged
-  menu.addEventListener('input', (e) => {
-    const el = e.target.closest('[data-color], [data-bg]');
-    if (!el) return;
-    let v = el.value.trim();
-    if (el.type === 'text' && /^[0-9a-f]{6}$/i.test(v)) v = `#${v}`;
-    if (!HEX.test(v)) return;
-    if (el.dataset.color) colors[el.dataset.color] = v; else bg[effective()][el.dataset.bg] = v;
-    // keep the picker and the text box in step
-    for (const o of el.closest('.set-pick').querySelectorAll('input')) if (o !== el && o !== document.activeElement) o.value = v;
-    save(); apply();
+    if (p) { presetName = p.dataset.preset; save(); apply(); render(); }
   });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (theme === 'system') apply(); });
 

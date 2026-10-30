@@ -12,7 +12,7 @@ const SUGGESTIONS = [
   'Who does machine learning research?',
 ];
 
-export function createChat({ els, known, getContext, offlineAnswer, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree }) {
+export function createChat({ els, known, getContext, offlineAnswer, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange }) {
   let messages = store.get('chat', []);
   if (!Array.isArray(messages)) messages = [];
   messages = messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-40);
@@ -20,7 +20,7 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
   let controller = null;
   let mode = null;
 
-  const save = () => store.set('chat', messages.filter((m) => !m.error).slice(-40));
+  const save = () => { store.set('chat', messages.filter((m) => !m.error).slice(-40)); onChange?.(); };
 
   function bubble(m, i) {
     if (m.role === 'user') return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;

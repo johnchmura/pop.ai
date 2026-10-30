@@ -1274,3 +1274,27 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 .program-inline select { width: auto; height: auto; }
 .filter-row .filter-block:has(#f-subject) { flex: 1 1 220px; min-width: 0; }
 #f-subject { width: 100%; max-width: 340px; }
+
+/* ---------- one course color, set by the theme (settings.js fills these in) ---------- */
+:root { --course-bg: #e3e9f8; --course-border: #b3c3ec; --course-text: #263a63; --course-sub: #4a5f8a; }
+.c-course { background: var(--course-bg); border-color: var(--course-border); color: var(--course-text); }
+.c-course .sub { color: var(--course-sub); }
+.gnode.course rect { fill: var(--course-bg); stroke: var(--course-border); }
+.gnode.course text { fill: var(--course-text); }
+.gnode.course.focus rect { stroke: var(--course-text); stroke-width: 1.8; }
+
+/* settings: the chosen theme gets a ring */
+.preset[aria-checked="true"] { border-color: var(--focus); box-shadow: 0 0 0 2px var(--focus); color: var(--ink); }
+.preset .sw i { width: 18px; height: 18px; }
+
+/* the wordmark grows and shrinks with the left panel (drag the divider) */
+.left { container-type: inline-size; }
+.logo { font-size: clamp(48px, 24cqi, 220px); }
+.tagline { font-size: clamp(12px, 2.4cqi, 17px); }
+.app .logo, .app.wide-right .logo { font-size: clamp(48px, 24cqi, 220px); }
+
+/* suggested courses that match what the chat discussed */
+.pr-suggest .sug.chat { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 8%, var(--card)); }
+.sug-star, .code-link.chat { color: var(--focus); }
+.sug-star { margin-right: 4px; font-size: 11px; }
+.program-inline select { field-sizing: content; }
