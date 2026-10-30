@@ -72,6 +72,13 @@ const KIND = {
   placeholder: { tag: '', cls: 'k-open' },
 };
 
+/** Why a suggested course has a star: something the student said, or the student's major. */
+function starReason(it, code) {
+  if (it.chatMatches?.includes(code)) return 'you mentioned this';
+  if (it.majorMatches?.includes(code)) return 'related to your major';
+  return '';
+}
+
 function linkify(text, known) {
   return esc(text).replace(/\b([A-Z]{2,4}) (\d{3})\b/g, (m) => (known(m) ? `<button type="button" class="code-link" data-code="${m}">${m}</button>` : m));
 }
@@ -95,10 +102,10 @@ function planRow(it, known, titleOf = () => '', addButton = () => '') {
       </div>
       ${it.suggestions?.length ? `<div class="pr-options pr-suggest">${it.suggestions.map((c) => {
     const title = titleOf(c);
-    const fromChat = it.chatMatches?.includes(c);
-    return `<button type="button" class="code-link sug${fromChat ? ' chat' : ''}" data-code="${esc(c)}" title="${esc(`${title ? `${c}: ${title}` : c}${fromChat ? ' · matches your chat' : ''}`)}">${fromChat ? '<span class="sug-star" aria-label="Matches your chat">★</span>' : ''}${esc(c)}${title ? `<span class="sug-title"> ${esc(title)}</span>` : ''}</button>`;
+    const why = starReason(it, c);
+    return `<button type="button" class="code-link sug${why ? ' chat' : ''}" data-code="${esc(c)}" title="${esc(`${title ? `${c}: ${title}` : c}${why ? ` · ${why}` : ''}`)}">${why ? `<span class="sug-star" aria-label="${esc(why)}">★</span>` : ''}${esc(c)}${title ? `<span class="sug-title"> ${esc(title)}</span>` : ''}</button>`;
   }).join('')}</div>` : ''}
-      ${it.options?.length ? `<div class="pr-options"><span class="small muted">${it.code ? 'Or' : 'Pick one'}:</span> ${(() => { const opts = it.options.filter((c) => known(c)); return opts.slice(0, 3).map((c) => `<button type="button" class="code-link${it.chatMatches?.includes(c) ? ' chat' : ''}" data-code="${esc(c)}"${it.chatMatches?.includes(c) ? ' title="Matches your chat"' : ''}>${it.chatMatches?.includes(c) ? '★ ' : ''}${esc(c)}</button>`).join(' ') + (opts.length > 3 ? ` <span class="small muted" title="${esc(opts.slice(3).join(', '))}">+${opts.length - 3} more</span>` : ''); })()}</div>` : ''}
+      ${it.options?.length ? `<div class="pr-options"><span class="small muted">${it.code ? 'Or' : 'Pick one'}:</span> ${(() => { const opts = it.options.filter((c) => known(c)); return opts.slice(0, 3).map((c) => `<button type="button" class="code-link${starReason(it, c) ? ' chat' : ''}" data-code="${esc(c)}"${starReason(it, c) ? ` title="${esc(starReason(it, c))}"` : ''}>${starReason(it, c) ? '★ ' : ''}${esc(c)}</button>`).join(' ') + (opts.length > 3 ? ` <span class="small muted" title="${esc(opts.slice(3).join(', '))}">+${opts.length - 3} more</span>` : ''); })()}</div>` : ''}
       ${tag && it.code && k.tag ? `<div class="pr-sub"><span class="pr-tag">${esc(tag)}</span></div>` : ''}
       ${issues.map((x) => `<div class="pr-issue ${x.level}">${x.level === 'error' ? '⚠' : '•'} ${esc(x.message)}</div>`).join('')}
     </li>`;
@@ -187,7 +194,7 @@ export function renderDegree(el, ctx) {
   const rule = planSemesters(audit, program, index, { ...inputs, grades, maxCredits });
   const ruleView = describePlan(rule, audit, { maxCredits });
   // real courses that fit each open slot (Core Curriculum, electives), shown under the slot
-  const suggestCtx = { index, program, audit, done: inputs.done, grades, interests: ctx.interests || null };
+  const suggestCtx = { index, program, audit, done: inputs.done, grades, interests: ctx.interests || null, majorKnown: !!transcript.programId };
   addSuggestions(ruleView, suggestCtx);
   const titleOf = (code) => index.get(code)?.title || '';
   // Add buttons only in the term the sections are for (the schedule semester)

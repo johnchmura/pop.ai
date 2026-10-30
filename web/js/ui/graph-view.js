@@ -10,7 +10,7 @@ function subjectClass(node) {
   return node.external ? 'other external' : 'course';
 }
 
-export function renderGraph({ index, focus, options, completed, planned, els, selected, filtered = false, addButton = () => '' }) {
+export function renderGraph({ index, focus, options, completed, planned, els, selected, filtered = false, addButton = () => '', suggestions = [] }) {
   const graph = buildGraph(index, focus, {
     showDependents: options.showDependents,
     hideBridge: !options.showBridge,
@@ -21,7 +21,7 @@ export function renderGraph({ index, focus, options, completed, planned, els, se
     els.focus.innerHTML = '';
     els.scroll.innerHTML = `<div class="graph-empty">
         <p>Search for a course to see its prerequisites and what it unlocks.</p>
-        <div class="seg">${['CS 481', 'CS 487', 'CS 351', 'CS 411'].map((c) => `<button type="button" data-search="${c}">${c}</button>`).join('')}</div>
+        <div class="seg">${(suggestions.length ? suggestions : ['CS 331', 'MATH 251', 'CS 480']).map((c) => `<button type="button" data-search="${esc(c)}" title="${esc(index.get(c)?.title || '')}">${esc(c)}</button>`).join('')}</div>
       </div>`;
     els.detail.hidden = true;
     return;

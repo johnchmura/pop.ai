@@ -8,7 +8,7 @@ import { evaluate, courseLeaves } from './prereq.js';
 import { offeredIn } from './forecast.js';
 import { groupForRequirement } from './plan-check.js';
 import { REPEATABLE } from './transcript.js';
-import { interestScore, focusInterests } from './interests.js';
+import { interestScore, focusInterests, programInterests } from './interests.js';
 
 const MAX_PER_SLOT = 3;
 const subjectOf = (code) => code.split(' ')[0];
@@ -120,7 +120,7 @@ function needsSignoff(course) {
  *   usedHere: codes already suggested for other slots (tried last)
  *   fields:   subjects the student already has for a "two or more fields" rule
  */
-function pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests }) {
+function pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests, major }) {
   const forecast = index.forecast;
   const out = [];
   for (const c of index.list) {
@@ -146,7 +146,8 @@ function pickFor(index, spec, { credits, termKey, termLabel, finished, current, 
   }
   const listed = spec.codes || [];
   const prefer = spec.prefer || [];
-  const chat = new Map(out.map((c) => [c.code, interestScore(c, interests)]));
+  // what the student said counts most, then the student's major
+  const chat = new Map(out.map((c) => [c.code, interestScore(c, interests) * 10 + interestScore(c, major)]));
   out.sort((a, b) => {
     // listed order first (for example IPRO 497 before IPRO 397)
     const la = listed.indexOf(a.code); const lb = listed.indexOf(b.code);
@@ -213,11 +214,20 @@ function groupForItem(item, program) {
  * Add `suggestions` (course codes) to the open slots of a plan view (the shape describePlan returns,
  * also used for the advisor's plan). Terms must be in time order. Changes the view in place.
  *   ctx: { index, program, audit, done (Set), grades (Map), interests (from chatInterests) }
- * Courses that match the chat come first; they are listed in item.chatMatches.
+ * Courses that match the chat come first (item.chatMatches), then courses related to the major (item.majorMatches).
  */
-export function addSuggestions(view, { index, program, audit, done = new Set(), grades = new Map(), interests = null }) {
+export function addSuggestions(view, { index, program, audit, done = new Set(), grades = new Map(), interests = null, majorKnown = true }) {
   if (!view?.terms) return view;
   interests = interests && focusInterests(interests, index.list);
+  // no declared or detected major: no major stars
+  const major = majorKnown ? focusInterests(programInterests(program), index.list) : null;
+  const matches = (it, codes) => {
+    const score = (c, i) => { const course = index.get?.(c); return course ? interestScore(course, i) : 0; };
+    it.chatMatches = codes.filter((c) => score(c, interests) > 0);
+    // a star for the major only outside the major's own department (History of AI for an AI major,
+    // not every PSYC course for a psychology major)
+    it.majorMatches = major ? codes.filter((c) => !it.chatMatches.includes(c) && subjectOf(c) !== home && score(c, major) > 0) : [];
+  };
   const hssGroup = program.groups.find((g) => g.type === 'hss');
   // never suggest a course the student has, has planned, or must take anyway
   const blocked = new Set(done);
@@ -244,11 +254,12 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
     for (const it of items) {
       it.suggestions = [];
       it.chatMatches = [];
-      if (!it.code && it.options?.length && interests) {
-        // a slot that lists its options: the ones from the chat go first
-        const score = (c) => { const course = index.get?.(c); return course ? interestScore(course, interests) : 0; };
+      it.majorMatches = [];
+      if (!it.code && it.options?.length) {
+        // a slot that lists its options: the ones from the chat go first, then the ones related to the major
+        const score = (c) => { const course = index.get?.(c); return course ? interestScore(course, interests) * 10 + interestScore(course, major) : 0; };
         it.options = [...it.options].sort((a, b) => score(b) - score(a));
-        it.chatMatches = it.options.filter((c) => score(c) > 0);
+        matches(it, it.options);
       }
       if (it.code || it.options?.length) continue; // a real course, or a slot that already lists its options
       const group = groupForItem(it, program);
@@ -257,8 +268,8 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       const spec = specFor(group, part, hssGroup);
       if (!spec) continue;
       const credits = Number(it.credits) || 3;
-      it.suggestions = pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests });
-      it.chatMatches = it.suggestions.filter((c) => { const course = index.get?.(c); return course && interestScore(course, interests) > 0; });
+      it.suggestions = pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests, major });
+      matches(it, it.suggestions);
       it.suggestions.forEach((c) => usedHere.add(c));
     }
     for (const c of current) finished.add(c);

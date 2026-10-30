@@ -148,3 +148,17 @@ test('suggested courses are offered: sections this semester, or the forecast or 
   }
   assert.ok(checked > 10, `checked ${checked}`);
 });
+
+test('courses related to the major get a star too (History of AI for an AI major)', async () => {
+  const { programInterests } = await import('../js/core/interests.js');
+  const ai = programs.find((p) => p.name === 'B.S. in Artificial Intelligence');
+  assert.ok(programInterests(ai).words.has('artificial intelligence'));
+  assert.ok(!programInterests(programs.find((p) => p.name === 'B.S. in Computer Science')).words.has('b.s'));
+  const { view } = planFor(ai, sample.courses);
+  const starred = view.terms.flatMap((t) => t.items).flatMap((i) => i.majorMatches || []);
+  assert.ok(starred.length, 'an AI major sees starred AI-related suggestions');
+  for (const code of starred) {
+    const c = index.get(code);
+    assert.match(`${c.title} ${c.description}`, /artificial intelligence|\bA\.?I\b/i, code);
+  }
+});

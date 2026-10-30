@@ -22,6 +22,9 @@ love loved enjoy enjoyed stuff kind sort cool fun idea ideas topic topics field 
 // words that only mean something inside a phrase ("machine learning", not "learn")
 const SOLO_SKIP = new Set(['learn', 'learning', 'study', 'studying', 'system', 'systems', 'design', 'science', 'engineering', 'management', 'analysis', 'theory', 'applied', 'introduction']);
 
+// short forms that course titles use: "History of AI", "Trustworthy AI"
+const ALIASES = { 'artificial intelligence': /\bA\.?I\b\.?/, 'machine learn': /\bML\b/ };
+
 const stem = (w) => w.replace(/(ies)$/, 'y').replace(/(ing|ers|er|s)$/, '');
 
 /**
@@ -41,28 +44,38 @@ export function chatInterests(messages = []) {
       const code = `${subj} ${num}`;
       codes.set(code, (codes.get(code) || 0) + recent);
     }
-    {
-      // runs of topic words: one word ("psychology") or a phrase ("machine learning" -> "machine learn")
-      for (const chunk of text.toLowerCase().split(/[^a-z\s-]+/)) {
-        let run = [];
-        const flush = () => {
-          if (run.length === 1 && !SOLO_SKIP.has(run[0].raw)) words.add(run[0].stem);
-          run = run.map((r) => r.stem);
-          for (let k = 0; k + 1 < run.length; k++) words.add(`${run[k]} ${run[k + 1]}`);
-          run = [];
-        };
-        for (const w of chunk.split(/\s+/)) {
-          if (w.length >= 4 && !STOP.has(w)) run.push({ raw: w, stem: stem(w) });
-          else flush();
-        }
-        flush();
-      }
-    }
+    topicWords(text, words);
   });
   return { codes, words };
 }
 
-/** How well one course matches the chat (0 = not at all). */
+/** Topic words and two-word phrases from free text ("machine learning" -> "machine learn"). */
+function topicWords(text, words = new Set()) {
+  if (/\bA\.?I\b/.test(text)) words.add('artificial intelligence'); // "AI" is too short for the word list
+  for (const chunk of String(text).toLowerCase().split(/[^a-z\s-]+/)) {
+    let run = [];
+    const flush = () => {
+      if (run.length === 1 && !SOLO_SKIP.has(run[0].raw)) words.add(run[0].stem);
+      run = run.map((r) => r.stem);
+      for (let k = 0; k + 1 < run.length; k++) words.add(`${run[k]} ${run[k + 1]}`);
+      run = [];
+    };
+    for (const w of chunk.split(/\s+/)) {
+      if (w.length >= 4 && !STOP.has(w)) run.push({ raw: w, stem: stem(w) });
+      else flush();
+    }
+    flush();
+  }
+  return words;
+}
+
+/** The student's major as interests: "B.S. in Artificial Intelligence" -> "artificial intelligence". */
+export function programInterests(program) {
+  const name = String(program?.name || '').replace(/^(B\.?[AS]\.?|Bachelor)\s+(of|in)\s+/i, '').replace(/\b(with|and)\b/gi, ',');
+  return { codes: new Map(), words: topicWords(name) };
+}
+
+/** How well one course matches the interests (0 = not at all). */
 export function interestScore(course, interests) {
   if (!interests || (!interests.codes?.size && !interests.words?.size)) return 0;
   let score = (interests.codes.get(course.code) || 0) * 10;
@@ -71,8 +84,9 @@ export function interestScore(course, interests) {
     const title = stems(course.title);
     const desc = stems(course.description);
     for (const w of interests.words) {
-      if (title.includes(` ${w} `)) score += 3;
-      else if (desc.includes(` ${w} `)) score += 1;
+      const alias = ALIASES[w];
+      if (title.includes(` ${w} `) || alias?.test(course.title || '')) score += 3;
+      else if (desc.includes(` ${w} `) || alias?.test(course.description || '')) score += 1;
     }
   }
   return score;

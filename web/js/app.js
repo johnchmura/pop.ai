@@ -15,7 +15,7 @@ import { cleanCommitments, sectionClashes, applyMemoryOps } from './core/commitm
 import { resolveProposal, applyChange, changesForServer } from './core/changes.js';
 import { studentContextBlock, readClientContext } from './core/context.js';
 import { offlineAnswer } from './core/offline.js';
-import { chatInterests } from './core/interests.js';
+import { chatInterests, programInterests, interestScore } from './core/interests.js';
 import { rulePlan, planTask, planUserText, finishAdvisorPlan } from './core/plan-ai.js';
 
 // ---------- state ----------
@@ -595,6 +595,33 @@ function graphFocus() {
   if (state.query.trim() && state.results.length) return state.results.slice(0, 3).map((r) => r.course.code);
   return [...plannedCourses()].slice(0, 6);
 }
+/** Graph tab with nothing searched: courses from the student's major that are next (not done, offered now). */
+function graphSuggestions() {
+  const program = state.programs.find((p) => p.id === state.transcript?.programId);
+  if (!program) return [];
+  const done = completedSet();
+  const offered = (c) => state.index.get(c)?.sections?.length;
+  const out = [];
+  // the plan on the Degree tab, in order (it already skips what is done or covered)
+  for (const t of lastDegree?.shown?.terms || []) {
+    for (const it of t.items) {
+      for (const c of [it.code, ...(it.chatMatches || []), ...(it.majorMatches || [])]) if (c && !done.has(c) && offered(c) && !out.includes(c)) out.push(c);
+    }
+  }
+  // no plan yet: required courses from slots the student has not covered
+  if (!out.length) {
+    for (const g of program.groups) {
+      for (const slot of g.slots || []) {
+        if (slot.some((option) => option.every((c) => done.has(c)))) continue;
+        for (const option of slot) for (const c of option) if (!done.has(c) && offered(c) && !out.includes(c)) out.push(c);
+      }
+    }
+  }
+  // then courses outside the requirement lists that fit the major (History of AI for an AI major)
+  const major = programInterests(program);
+  for (const c of state.index.list) if (out.length < 12 && !done.has(c.code) && c.sections.length && Number(c.code.split(' ')[1]) < 500 && interestScore(c, major) >= 3 && !out.includes(c.code)) out.push(c.code);
+  return out.slice(0, 6);
+}
 function renderGraphTab() {
   if (state.tab !== 'graph') return;
   renderGraph({
@@ -607,6 +634,7 @@ function renderGraphTab() {
     selected: state.graphSelected,
     filtered: state.graphFilter.length > 0,
     addButton: addCourseButton,
+    suggestions: graphSuggestions(),
   });
   $('#graph-clear').hidden = !state.graphFilter.length;
 }
