@@ -1378,3 +1378,12 @@ input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--
 .dot.pl { background: color-mix(in srgb, var(--status-ip) 40%, transparent); }
 /* phone bottom bar: the tinted background marks the open tab (no underline) */
 @media (max-width: 960px) { .tab[aria-selected="true"] { box-shadow: none; color: var(--focus); } }
+
+/* settings: erase data, and the warning before it */
+.btn.danger-outline { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: none; width: 100%; }
+.btn.danger-outline:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); border-color: var(--danger); }
+.confirm-dialog { max-width: min(420px, calc(100vw - 32px)); border: 1px solid var(--card-border); border-radius: 16px; padding: 22px 22px 18px; background: var(--card); color: var(--text); box-shadow: 0 24px 60px rgba(10, 14, 30, .25); }
+.confirm-dialog::backdrop { background: rgba(10, 14, 30, .45); }
+.confirm-dialog h2 { margin: 0 0 8px; font-size: 18px; color: var(--ink); }
+.confirm-dialog p { margin: 0 0 18px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }

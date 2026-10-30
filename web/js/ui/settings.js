@@ -69,6 +69,9 @@ export function createSettings({ button, menu, onChange }) {
         <div class="set-presets" role="radiogroup" aria-label="Theme">
           ${PRESETS.map((p) => `<button type="button" class="preset" role="radio" aria-checked="${p.name === presetName}" data-preset="${esc(p.name)}"><span class="sw"><i style="background:${p.colors.accent}"></i><i style="background:${p.colors.course}"></i></span>${esc(p.name)}</button>`).join('')}
         </div>
+      </fieldset>
+      <fieldset class="set-group"><legend>Your data</legend>
+        <button type="button" class="btn danger-outline" data-erase>Erase my data</button>
       </fieldset>`;
   }
 
@@ -85,10 +88,35 @@ export function createSettings({ button, menu, onChange }) {
     // data-mode, not data-theme: <html> carries data-theme too, and closest() would find it
     const t = e.target.closest('[data-mode]');
     if (t && menu.contains(t)) { theme = t.dataset.mode; save(); apply(); render(); return; }
+    if (e.target.closest('[data-erase]')) { close(); confirmErase(); return; }
     const p = e.target.closest('[data-preset]');
     if (p) { presetName = p.dataset.preset; save(); apply(); render(); }
   });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (theme === 'system') apply(); });
+
+  // erase everything the app knows about the student (display settings stay); asks first
+  const STUDENT_KEYS = ['transcript', 'aiPlan', 'chat', 'chatArchive', 'prefs', 'busy', 'completed', 'saved', 'filters', 'graphFilter', 'tab'];
+  function confirmErase() {
+    let dlg = document.getElementById('erase-dialog');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'erase-dialog';
+      dlg.className = 'confirm-dialog';
+      dlg.setAttribute('aria-labelledby', 'erase-title');
+      dlg.innerHTML = `<h2 id="erase-title">Erase your data?</h2>
+        <p>This removes your transcript, plan, saved courses, chat, saved preferences, and time commitments from this browser. Display settings stay. This cannot be undone.</p>
+        <div class="confirm-actions"><button type="button" class="btn" value="cancel" data-cancel autofocus>Cancel</button><button type="button" class="btn danger" data-confirm>Erase</button></div>`;
+      document.body.appendChild(dlg);
+      dlg.addEventListener('click', (e) => {
+        if (e.target === dlg || e.target.closest('[data-cancel]')) { dlg.close(); return; }
+        if (e.target.closest('[data-confirm]')) {
+          for (const k of STUDENT_KEYS) { try { localStorage.removeItem(`advisor:${k}`); } catch { /* storage off */ } }
+          location.reload();
+        }
+      });
+    }
+    dlg.showModal();
+  }
 
   apply();
   return { apply, close };

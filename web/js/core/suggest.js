@@ -292,5 +292,32 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
   };
   for (const term of view.terms) run(term.items, term.key || '', term.label || '');
   if (view.later?.length) run(view.later, '');
+  oneStarEach([...view.terms.flatMap((t) => t.items), ...(view.later || [])]);
   return view;
+}
+
+/**
+ * Stars mean something only when they are rare: each open slot shows at most one starred course,
+ * and a starred course is starred (and suggested) in only one slot, the first one it fits.
+ */
+function oneStarEach(items) {
+  const starred = new Set();
+  const shown = new Set();
+  for (const it of items) {
+    if (it.suggestions?.length) {
+      // a course already suggested in an earlier slot gives way here, unless nothing else is left
+      const fresh = it.suggestions.filter((c) => !shown.has(c));
+      if (fresh.length) it.suggestions = fresh;
+      it.suggestions.forEach((c) => shown.add(c));
+    }
+    const list = it.suggestions?.length ? it.suggestions : (it.options || []);
+    if (!list.length) continue;
+    const pick = (cands) => {
+      const c = (cands || []).find((x) => list.includes(x) && !starred.has(x));
+      return c ? [c] : [];
+    };
+    it.chatMatches = pick(it.chatMatches);
+    it.majorMatches = it.chatMatches.length ? [] : pick(it.majorMatches);
+    for (const c of [...it.chatMatches, ...it.majorMatches]) starred.add(c);
+  }
 }

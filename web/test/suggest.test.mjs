@@ -170,3 +170,18 @@ test('option lists keep only courses offered that term', async () => {
     for (const term of view.terms) for (const it of term.items) for (const c of it.options || []) assert.ok(isOffered(index, c, term.key, term.label), `${c} in ${term.label}`);
   }
 });
+
+test('one star per slot, and a starred course is starred and suggested in one slot only', async () => {
+  const { chatInterests } = await import('../js/core/interests.js');
+  const program = programs.find((p) => p.id === 'bs-cs');
+  const { audit, inputs, grades } = planFor(program, sample.courses);
+  const view = describePlan(planSemesters(audit, program, index, { ...inputs, grades }), audit);
+  addSuggestions(view, { index, program, audit, done: inputs.done, grades, interests: chatInterests([{ role: 'user', content: 'I love psychology and PSYC 210' }]) });
+  const items = view.terms.flatMap((t) => t.items);
+  const stars = items.flatMap((i) => [...(i.chatMatches || []), ...(i.majorMatches || [])]);
+  assert.ok(stars.length >= 1);
+  assert.equal(new Set(stars).size, stars.length, `starred twice: ${stars}`);
+  for (const i of items) assert.ok((i.chatMatches?.length || 0) + (i.majorMatches?.length || 0) <= 1, `${i.label}: ${i.chatMatches}`);
+  const sugg = items.flatMap((i) => i.suggestions || []);
+  for (const c of stars) assert.equal(sugg.filter((x) => x === c).length, 1, `${c} suggested more than once`);
+});
