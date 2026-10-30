@@ -87,7 +87,7 @@ export function renderGraph({ index, focus, options, completed, planned, els, se
         <title>${esc(tip)}</title>
         <rect width="${nodeW}" height="${nodeH}" rx="${nodeH / 2}"/>
         <text x="${nodeW / 2 + (done ? 8 : 0)}" y="${nodeH / 2}">${esc(n.code)}</text>
-        ${done ? `<path class="tick" d="M10 ${nodeH / 2} l3.5 3.5 l7 -7" stroke="currentColor" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--ok)"/>` : ''}
+        ${done ? `<g class="tick" aria-hidden="true"><circle cx="14" cy="${nodeH / 2}" r="6.5"/><path d="M10.9 ${nodeH / 2} l2.2 2.2 l4 -4.2"/></g>` : ''}
       </g>`;
   }
   out += '</g>';
@@ -124,7 +124,7 @@ export function renderDetail({ index, code, completed, planned, els, addButton =
       ${addButton(code)}
       <button type="button" class="btn" data-search="${esc(code)}">Search ${esc(code)}</button>
       <button type="button" class="btn" data-ask="${esc(code)}">Ask advisor</button>
-      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '✓ Taken' : 'I took this'}</button>
+      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'I took this'}</button>
     </div>`;
 }
 

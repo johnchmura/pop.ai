@@ -555,7 +555,8 @@ mark { background: var(--match-bg); color: var(--match-text); border-radius: 3px
 .gnode.external rect { stroke-dasharray: 4 3; }
 .gnode.focus rect { stroke-width: 2.6; }
 .gnode.cs.focus rect { stroke: var(--edge); } .gnode.math.focus rect { stroke: var(--edge-co); }
-.gnode.done .tick { fill: var(--ok); }
+.gnode.done .tick circle { fill: var(--ok); stroke: none; }
+.gnode.done .tick path { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .gnode:hover rect, .gnode.selected rect { stroke-width: 2.6; stroke: var(--focus); }
 .gedge { fill: none; stroke: var(--edge); stroke-width: 2; opacity: .9; transition: opacity .12s, stroke-width .12s; }
 .gedge.co { stroke: var(--edge-co); }
@@ -1311,3 +1312,7 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 .sec-pop button:hover, .sec-pop button:focus-visible { background: color-mix(in srgb, var(--focus) 10%, transparent); color: var(--ink); outline: none; }
 .add-btn.added:hover { background: var(--card); color: var(--danger); border-color: var(--danger); }
 .add-btn.added:hover::after { content: ' · remove'; }
+
+/* the "taken" check: a small green circle, same everywhere (badges, buttons, graph nodes) */
+.chk-ic { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 5px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 9px; font-weight: 900; line-height: 1; vertical-align: -2px; }
+.btn.on { display: inline-flex; align-items: center; }

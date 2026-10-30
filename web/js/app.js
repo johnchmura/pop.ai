@@ -115,7 +115,7 @@ function hl(text) {
 function eligibilityBadge(course) {
   if (doneSet().has(course.code)) {
     const g = gradeMap().get(course.code);
-    return `<span class="badge ok">✓ Completed${g ? ` · ${esc(g)}` : ''}</span>`;
+    return `<span class="badge ok"><span class="chk-ic" aria-hidden="true">✓</span>Completed${g ? ` · ${esc(g)}` : ''}</span>`;
   }
   if (transcriptSets().inProgress.has(course.code)) return '<span class="badge">In progress now</span>';
   const done = completedSet();
@@ -301,7 +301,7 @@ function courseCard(course) {
   const onTranscript = transcriptSets().completed.has(course.code);
   html += `<div class="course-actions">
       <button type="button" class="btn" data-ask="${esc(course.code)}">Ask advisor</button>
-      ${onTranscript ? '' : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '✓ Taken' : 'I took this'}</button>`}
+      ${onTranscript ? '' : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'I took this'}</button>`}
       ${!course.stub ? `<a class="link-btn" href="${catalogUrl(course.code)}" target="_blank" rel="noopener noreferrer">Catalog ↗</a>` : ''}
     </div>`;
   return `${html}</article>`;
