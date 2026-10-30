@@ -125,7 +125,7 @@ function eligibilityBadge(course) {
   planned.delete(course.code);
   const st = { completed: done, current: planned, grades: gradeMap() };
   const result = evaluate(course.prereq, st);
-  if (result === 'met') return '<span class="badge ok">You can take this</span>';
+  if (result === 'met') return '<span class="badge ok">Prerequisites met</span>';
   const missing = missingParts(course.prereq, st).join('; ');
   if (result === 'unknown') return `<span class="badge warn">Needs: ${esc(missing)}</span>`;
   return `<span class="badge no">Missing: ${esc(missing)}</span>`;
