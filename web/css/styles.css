@@ -1376,3 +1376,5 @@ input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--
 .p-ip, .dot.ip { background: var(--status-ip); }
 .p-pl { background: color-mix(in srgb, var(--status-ip) 40%, transparent); }
 .dot.pl { background: color-mix(in srgb, var(--status-ip) 40%, transparent); }
+/* phone bottom bar: the tinted background marks the open tab (no underline) */
+@media (max-width: 960px) { .tab[aria-selected="true"] { box-shadow: none; color: var(--focus); } }
