@@ -7,7 +7,8 @@ import { store, esc } from './util.js';
 const PRESETS = [
   { name: 'Default', colors: { accent: '#3b6fd8', course: '#7f9be0', edge: '#1b365d' } },
   { name: 'Ocean', colors: { accent: '#0e7490', course: '#3aa6b9', edge: '#0b3d5c' } },
-  { name: 'Forest', colors: { accent: '#2e7d4f', course: '#6fae7f', edge: '#1f4d3a' } },
+  // Forest keeps green out of the course and accent colors, so "completed" (green) stays easy to see
+  { name: 'Forest', colors: { accent: '#2e6b5e', course: '#b39b6e', edge: '#2a4a3f' } },
   { name: 'Sunset', colors: { accent: '#d9622b', course: '#e8955f', edge: '#6b2d3c' } },
   { name: 'Violet', colors: { accent: '#7048e8', course: '#9d85f2', edge: '#3b2a78' } },
   { name: 'Mono', colors: { accent: '#333333', course: '#9aa0a6', edge: '#333333' } },
@@ -46,7 +47,7 @@ export function createSettings({ button, menu, onChange }) {
     const dark = mode === 'dark';
     const set = (name, value) => (value ? root.style.setProperty(name, value) : root.style.removeProperty(name));
     const c = colors();
-    set('--focus', c.accent);
+    set('--focus', dark ? mix(c.accent, '#ffffff', 0.35) : c.accent); // lighter on dark backgrounds so links stay readable
     const sh = shades(c.course, dark);
     set('--course-bg', sh.bg); set('--course-border', sh.border); set('--course-text', sh.text); set('--course-sub', sh.sub);
     set('--edge', dark ? mix(c.edge, '#ffffff', 0.55) : c.edge);

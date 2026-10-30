@@ -1351,3 +1351,28 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 
 /* consistency: buttons use sentence case like every other control */
 .pill { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; }
+
+/* ---------- the theme color, used a little more (icons and the "selected / next / added" states) ---------- */
+:root { --accent-soft: color-mix(in srgb, var(--focus) 10%, transparent); --accent-line: color-mix(in srgb, var(--focus) 55%, transparent); }
+.theme-toggle, .search-icon, .tab-bot, .mtab svg, .icon-btn, .send-btn { color: var(--focus); }
+.theme-toggle:hover { background: var(--accent-soft); }
+.drop svg, .upload-summary svg { stroke: var(--focus); }
+.drop:hover, .drop.over { border-color: var(--accent-line); background: var(--accent-soft); }
+.bot-avatar { color: var(--focus); background: var(--accent-soft); }
+.tab[aria-selected="true"] { box-shadow: inset 0 -2px 0 var(--focus); color: var(--ink); }
+.tab[aria-selected="true"] .tab-bot { color: var(--focus); }
+.pill[aria-expanded="true"] { border-color: var(--focus); color: var(--focus); }
+.pill-badge { background: var(--focus); color: #fff; }
+.btn.primary { background: var(--focus); border-color: var(--focus); color: #fff; }
+.add-btn.added { background: var(--focus); border-color: var(--focus); color: #fff; }
+.next-badge { background: var(--focus); color: #fff; }
+.term.next { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.ex-chip:hover, .btn:hover { border-color: var(--accent-line); }
+.seg button[aria-pressed="true"] { border-color: var(--focus); background: var(--accent-soft); color: var(--focus); }
+input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--focus); border-color: var(--focus); }
+
+/* status colors never change with the theme: done = green, in progress = blue */
+:root { --status-ip: #3b6fd8; }
+.p-ip, .dot.ip { background: var(--status-ip); }
+.p-pl { background: color-mix(in srgb, var(--status-ip) 40%, transparent); }
+.dot.pl { background: color-mix(in srgb, var(--status-ip) 40%, transparent); }
