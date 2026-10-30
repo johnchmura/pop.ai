@@ -1,5 +1,5 @@
-// What the student talked about in the chat, used to rank suggested courses for open plan slots.
-// Course codes named in the chat (by the student or the advisor) count most; topic words the
+// What the student said in the chat, used to rank suggested courses for open plan slots.
+// Course codes the student named count most; topic words the
 // student typed ("machine learning", "psychology", "music") count when they appear in a course
 // title or description. No DOM code here; tests use it too.
 
@@ -35,12 +35,13 @@ export function chatInterests(messages = []) {
   list.forEach((m, i) => {
     const recent = 1 + i / Math.max(1, list.length); // 1 .. 2
     const text = m.content.replace(/```[\s\S]*?```/g, ' '); // skip machine blocks
+    // only what the student said counts (a star means "you mentioned this")
+    if (m.role !== 'user') return;
     for (const [, subj, num] of text.toUpperCase().matchAll(CODE)) {
       const code = `${subj} ${num}`;
-      // the student naming a course counts a bit more than the advisor naming it
-      codes.set(code, (codes.get(code) || 0) + recent * (m.role === 'user' ? 1.5 : 1));
+      codes.set(code, (codes.get(code) || 0) + recent);
     }
-    if (m.role === 'user') {
+    {
       // runs of topic words: one word ("psychology") or a phrase ("machine learning" -> "machine learn")
       for (const chunk of text.toLowerCase().split(/[^a-z\s-]+/)) {
         let run = [];

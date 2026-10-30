@@ -11,7 +11,8 @@ import { offeredIn } from '../js/core/forecast.js';
 import { REPEATABLE } from '../js/core/transcript.js';
 
 const j = (f) => JSON.parse(readFileSync(new URL(`./${f}`, import.meta.url)));
-const index = buildIndex(j('data/catalog.json'), j('data/sample-sections.json'), j('data/forecast.json'));
+// real Spring 2027 sections: suggestions must be courses that are offered
+const index = buildIndex(j('data/catalog.json'), JSON.parse(readFileSync(new URL('../../seed/spring_2027.json', import.meta.url))), j('data/forecast.json'));
 const { programs } = j('data/programs.json');
 const titles = new Map(index.list.map((c) => [c.code, c.title]));
 const sample = parseTranscriptText(readFileSync(new URL('../samples/sample-transcript.txt', import.meta.url), 'utf8'), { catalogTitles: titles });
@@ -113,10 +114,10 @@ test('suggested courses follow what the chat discussed', async () => {
   // the student says what interests them; the advisor names a course
   const chat = [
     { role: 'user', content: 'I am really into psychology and how people make decisions.' },
-    { role: 'assistant', content: 'PSYC 221 could be a good fit.' },
+    { role: 'assistant', content: 'PSYC 221 could be a good fit.' }, // the advisor's words do not count
   ];
   const interests = chatInterests(chat);
-  assert.ok(interests.codes.has('PSYC 221') && interests.words.has('psychology'));
+  assert.ok(!interests.codes.has('PSYC 221') && interests.words.has('psychology'));
   const { audit, inputs, grades } = base;
   const best = bestAttempts(sample.courses);
   const completed = new Set(best.filter((r) => r.status === 'completed').map((r) => r.code));
@@ -128,4 +129,22 @@ test('suggested courses follow what the chat discussed', async () => {
   assert.ok(s.chatMatches.includes(s.suggestions[0]));
   // no chat: the old order
   assert.ok(chatInterests([]).codes.size === 0);
+});
+
+test('suggested courses are offered: sections this semester, or the forecast or sections for later terms', () => {
+  let checked = 0;
+  for (const program of programs.slice(0, 12)) {
+    const { view } = planFor(program, sample.courses);
+    for (const term of view.terms) {
+      for (const it of term.items) {
+        for (const code of it.suggestions || []) {
+          const c = index.get(code);
+          if (term.label === index.semester) assert.ok(c.sections.length, `${code} has no ${term.label} sections`);
+          else assert.ok(c.sections.length || offeredIn(index.forecast, code, term.key) === true, `${code} not offered in ${term.label}`);
+          checked++;
+        }
+      }
+    }
+  }
+  assert.ok(checked > 10, `checked ${checked}`);
 });

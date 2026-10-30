@@ -120,7 +120,7 @@ function needsSignoff(course) {
  *   usedHere: codes already suggested for other slots (tried last)
  *   fields:   subjects the student already has for a "two or more fields" rule
  */
-function pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home, interests }) {
+function pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests }) {
   const forecast = index.forecast;
   const out = [];
   for (const c of index.list) {
@@ -138,6 +138,10 @@ function pickFor(index, spec, { credits, termKey, finished, current, grades, blo
     const offered = termKey ? offeredIn(forecast, c.code, termKey) : null;
     if (offered === false) continue;
     if (offered === null && termKey && (c.subject === 'CS' || c.subject === 'CSP') && forecast) continue;
+    // only courses that are really offered: the schedule semester needs sections; later terms need the
+    // department forecast or sections now (a course with neither is not being offered)
+    if (termLabel && termLabel === index.semester) { if (!c.sections?.length) continue; }
+    else if (offered !== true && !c.sections?.length) continue;
     out.push(c);
   }
   const listed = spec.codes || [];
@@ -235,7 +239,7 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
 
   const usedHere = new Set();
   const finished = new Set(done);
-  const run = (items, termKey) => {
+  const run = (items, termKey, termLabel = '') => {
     const current = new Set(items.filter((i) => i.code).map((i) => i.code));
     for (const it of items) {
       it.suggestions = [];
@@ -253,13 +257,13 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       const spec = specFor(group, part, hssGroup);
       if (!spec) continue;
       const credits = Number(it.credits) || 3;
-      it.suggestions = pickFor(index, spec, { credits, termKey, finished, current, grades, blocked, usedHere, fields, home, interests });
+      it.suggestions = pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests });
       it.chatMatches = it.suggestions.filter((c) => { const course = index.get?.(c); return course && interestScore(course, interests) > 0; });
       it.suggestions.forEach((c) => usedHere.add(c));
     }
     for (const c of current) finished.add(c);
   };
-  for (const term of view.terms) run(term.items, term.key || '');
+  for (const term of view.terms) run(term.items, term.key || '', term.label || '');
   if (view.later?.length) run(view.later, '');
   return view;
 }
