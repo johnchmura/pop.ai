@@ -5,6 +5,10 @@ import { parseProposals } from '../core/changes.js';
 import { parseMemory } from '../core/commitments.js';
 
 const BOT_ICON = '<span class="bot-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg></span>';
+// the advisor ends a reply with this when the student asks to change the degree plan
+const PLAN_MARK = /\s*\[\[update-plan\]\]\s*/;
+const PLAN_MARKS = /\s*\[\[update-plan\]\]\s*/g;
+
 const GREETING = 'Ask about courses, your plan, or research. 👋';
 const SUGGESTIONS = [
   'What can I take after CS 331?',
@@ -12,19 +16,18 @@ const SUGGESTIONS = [
   'Who does machine learning research?',
 ];
 
-export function createChat({ els, known, getContext, offlineAnswer, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange }) {
+export function createChat({ els, known, getContext, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange, onPlanRequest }) {
   let messages = store.get('chat', []);
   if (!Array.isArray(messages)) messages = [];
   messages = messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-40);
   let busy = false;
   let controller = null;
-  let mode = null;
 
   const save = () => { store.set('chat', messages.filter((m) => !m.error).slice(-40)); onChange?.(); };
 
   function bubble(m, i) {
     if (m.role === 'user') return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
-    const { text, proposals } = parseProposals(parseMemory(m.content).text);
+    const { text, proposals } = parseProposals(parseMemory(m.content.replace(PLAN_MARKS, ' ')).text);
     const body = m.pending && !text
       ? '<span class="typing" aria-label="Thinking"><i></i><i></i><i></i></span>'
       : renderMarkdown(text, known);
@@ -76,9 +79,6 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
     controller = new AbortController();
     try {
       const history = messages.filter((m) => m !== reply && !m.error).map(({ role, content }) => ({ role, content }));
-      // no Claude API key on the server: answer from the app's own data, in the page
-      const answerOffline = async () => { setMode('offline'); reply.content = offlineAnswer ? await offlineAnswer(question) : 'The advisor is offline.'; };
-      if (mode === 'offline') { await answerOffline(); return; }
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -87,8 +87,7 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
       });
       if (res.status === 503) {
         const j = await res.json().catch(() => ({}));
-        if (j.mode === 'offline') { await answerOffline(); return; }
-        throw Object.assign(new Error(j.error || 'The advisor is not available.'), { safe: true });
+        throw Object.assign(new Error('The advisor is not available right now. Try again later.'), { safe: true });
       }
       if (!res.ok || !res.body) {
         let msg = `The server returned an error (${res.status}).`;
@@ -111,8 +110,7 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
           if (!line) continue;
           let evt;
           try { evt = JSON.parse(line.slice(5)); } catch { continue; }
-          if (evt.type === 'meta') setMode(evt.mode, evt.model);
-          else if (evt.type === 'text') { reply.content += evt.text; renderSoon(); }
+          if (evt.type === 'text') { reply.content += evt.text; renderSoon(); }
           else if (evt.type === 'error') throw Object.assign(new Error(evt.message), { safe: true });
           else if (evt.type === 'done') finished = true;
         }
@@ -129,6 +127,10 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
       }
     } finally {
       reply.pending = false;
+      if (!reply.error && PLAN_MARK.test(reply.content)) {
+        reply.content = reply.content.replace(PLAN_MARKS, '').trimEnd();
+        onPlanRequest?.();
+      }
       if (!reply.error && onMemory) {
         const { ops } = parseMemory(reply.content);
         if (ops.length) { const notes = onMemory(ops); if (notes.length) reply.memoryNotes = notes; }
@@ -137,19 +139,6 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
       controller = null;
       save();
       render();
-    }
-  }
-
-  function setMode(m, model) {
-    mode = m;
-    if (m === 'claude') {
-      els.mode.textContent = ''; // working normally: no badge to read
-      els.mode.className = 'mode-badge ok';
-      els.mode.title = `Answers from ${model || 'Claude'}`;
-    } else {
-      els.mode.textContent = 'Offline';
-      els.mode.className = 'mode-badge warn';
-      els.mode.title = 'No Claude API key is set on the server. Answers come from the app’s course data only.';
     }
   }
 
@@ -208,12 +197,6 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
     els.input.focus();
   });
 
-  // server mode badge
-  fetch('/api/health').then((r) => r.json()).then((h) => setMode(h.mode, h.model)).catch(() => {
-    els.mode.textContent = 'Server offline';
-    els.mode.className = 'mode-badge warn';
-  });
-
   render();
   return {
     ask,
@@ -221,6 +204,5 @@ export function createChat({ els, known, getContext, offlineAnswer, onCodeClick,
     /** The conversation so far (no error bubbles), for the plan builder. */
     messages: () => messages.filter((m) => !m.error && !m.pending && m.content).map(({ role, content }) => ({ role, content })),
     get busy() { return busy; },
-    get mode() { return mode; },
   };
 }

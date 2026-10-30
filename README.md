@@ -46,11 +46,11 @@ Without `--keep-catalog` and `--keep-sections`, `advisor-seed` replaces the cata
 python main.py advisor-serve        # http://localhost:3000
 ```
 
-Use `--port 3001` if port 3000 is busy. Without `ANTHROPIC_API_KEY`, the app still works and chat answers come from the app's own data. If the database is empty on the first start, the advisor loads `seed/` by itself.
+Use `--port 3001` if port 3000 is busy. The chat, transcript reading, and plans need `ANTHROPIC_API_KEY`. If the database is empty on the first start, the advisor loads `seed/` by itself.
 
 ## Faculty search
 
-The chat helps students find faculty whose research fits their interests. Ask about research, labs, or professors ("Who does machine learning research?"). The server adds the best-matching faculty to Claude's context, so the advisor names real people, links their profiles, and suggests the courses that prepare for their work. Without an API key, the offline answer lists the matching faculty.
+The chat helps students find faculty whose research fits their interests. Ask about research, labs, or professors ("Who does machine learning research?"). The server adds the best-matching faculty to Claude's context, so the advisor names real people, links their profiles, and suggests the courses that prepare for their work.
 
 The data comes from IIT's online directory (iit.edu/directory/people), read the way Ishaan Goel's [iit-faculty-search](https://github.com/igoeldc/iit-faculty-search) scraper reads it. `seed/faculty.json` holds a copy, and the monthly refresh job (see Deploy) updates it. To refresh it now:
 

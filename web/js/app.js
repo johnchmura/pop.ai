@@ -14,9 +14,8 @@ import { bestAttempts, cleanRecords } from './core/transcript.js';
 import { cleanCommitments, sectionClashes, applyMemoryOps } from './core/commitments.js';
 import { resolveProposal, applyChange, changesForServer } from './core/changes.js';
 import { studentContextBlock, readClientContext } from './core/context.js';
-import { offlineAnswer } from './core/offline.js';
 import { chatInterests, programInterests, interestScore } from './core/interests.js';
-import { rulePlan, planTask, planUserText, finishAdvisorPlan } from './core/plan-ai.js';
+import { planTask, planUserText, finishAdvisorPlan } from './core/plan-ai.js';
 
 // ---------- state ----------
 const DEFAULT_OPTIONS = {
@@ -50,7 +49,7 @@ const state = {
   graphSelected: null,
   transcript: loadTranscript(),
   // recommended plan: which one to show, and the advisor's latest plan
-  plan: { view: store.get('planView', 'advisor'), ai: store.get('aiPlan', null)?.plan || null, aiFingerprint: store.get('aiPlan', null)?.fingerprint || '', busy: false, error: '' },
+  plan: { ai: store.get('aiPlan', null)?.plan || null, busy: false },
   programs: [],
   health: null,
 };
@@ -329,19 +328,6 @@ async function semanticSearch(q) {
   }
 }
 
-// ---------- faculty (IIT's online directory): used by offline chat answers; online, the server adds them ----------
-const facultyCache = new Map(); // query -> results
-const RESEARCH_Q = /\b(research|researchers?|professors?|faculty|labs?|laborator(y|ies)|mentors?|ph\.?d|thesis|publications?|work with|works on|who (works|studies|does|teaches)|reach out|undergraduate research|scholar)\b/i;
-async function fetchFaculty(q, limit = 10) {
-  const key = `${limit}|${q.toLowerCase()}`;
-  if (!facultyCache.has(key)) {
-    const res = await fetch(`/api/faculty?${new URLSearchParams({ q, limit: String(limit) })}`);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-    facultyCache.set(key, data.results || []);
-  }
-  return facultyCache.get(key);
-}
 
 function renderResults() {
   const q = state.query.trim();
@@ -448,6 +434,7 @@ function chatContext() {
 function setTranscript(t) {
   const isNew = t && (!state.transcript || t.source !== state.transcript.source);
   state.transcript = t && t.courses?.length ? t : null;
+  if (!state.transcript) setPlan(null); // cleared: the plan goes with it
   if (isNew || !state.transcript) $('.upload-card')?.classList.remove('replacing');
   store.set('transcript', state.transcript);
   renderCompletedChips();
@@ -455,25 +442,13 @@ function setTranscript(t) {
   renderDegreeTab();
 }
 let lastDegree = null;
-/** What the plan depends on. When it changes, the advisor's plan is out of date. */
-function planFingerprint() {
-  const t = state.transcript;
-  const raw = JSON.stringify([
-    t?.programId || '', t?.maxCredits || 15, (t?.changes || []).map((c) => c.id),
-    (t?.courses || []).map((c) => `${c.code}|${c.grade}|${c.status}`).sort(),
-    [...plannedCourses()].sort(), state.busy.map((c) => c.id),
-  ]);
-  let h = 0;
-  for (let i = 0; i < raw.length; i++) h = (h * 31 + raw.charCodeAt(i)) >>> 0;
-  return h.toString(36);
-}
 function renderDegreeTab() {
   const card = $('.upload-card');
   const hasT = !!state.transcript;
   card.classList.toggle('compact', hasT && !card.classList.contains('replacing'));
   $('#degree-intro').hidden = hasT && !card.classList.contains('replacing');
   const sum = $('#upload-summary-text');
-  if (sum) sum.textContent = hasT ? `${state.transcript.source || 'Transcript'} · ${state.transcript.courses.length} courses` : '';
+  if (sum) sum.textContent = hasT ? (state.transcript.source || 'Transcript') : '';
   if (state.tab !== 'degree') return;
   lastDegree = renderDegree($('#degree-body'), {
     index: state.index,
@@ -482,9 +457,8 @@ function renderDegreeTab() {
     savedCourses: plannedCourses(),
     known,
     addButton: addCourseButton,
-    hasClaude: state.health?.mode === 'claude',
     interests: chatInterests(store.get('chat', [])), // suggested courses follow what the chat discussed
-    plan: { ...state.plan, aiStale: !!state.plan.ai && state.plan.aiFingerprint !== planFingerprint() },
+    plan: state.plan,
   });
 }
 /** The plan on screen, short, for the chat advisor. */
@@ -496,59 +470,40 @@ function shownPlanSummary() {
     items: t.items.map((i) => i.code || `[${i.label || i.requirement}${i.suggestions?.length ? `; suggested: ${i.suggestions.join(', ')}` : ''}]`),
   }));
 }
-function askAboutPlan() {
-  setTab('chat');
-  chat.ask('Look at my degree progress and the recommended plan on the Degree tab. Is it a good plan? Suggest changes, and tell me which electives fit me best.');
+function setPlan(plan) {
+  state.plan.ai = plan;
+  store.set('aiPlan', plan ? { plan, at: Date.now() } : null);
 }
+/**
+ * Make the plan. Runs only when a transcript is uploaded (or uploaded again) and when the student
+ * asks for a change in the chat. Until then, and if it fails, the plan follows the degree rules.
+ */
 async function buildPlan() {
-  if (state.plan.busy || !state.transcript) return;
+  if (state.plan.busy || !state.transcript || state.health?.mode !== 'claude') return;
   state.plan.busy = true;
-  state.plan.error = '';
   renderDegreeTab();
-  const fingerprint = planFingerprint();
   try {
     const ctx = readClientContext({ ...chatContext(), plan: [] }, state.index);
-    if (!ctx.transcript.length) throw new Error('Upload your transcript on the Degree tab first.');
-    const env = { index: state.index, programs: state.programs, ctx };
-    let data;
-    if (state.health?.mode !== 'claude') {
-      data = rulePlan(state.index, state.programs, ctx);
-    } else {
-      const terms = (state.index.forecast?.terms || []).map((t) => t.label);
-      const res = await fetch('/api/plan', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          studentContext: `${studentContextBlock(state.index, 'my degree plan', ctx, state.programs)}\n\n${planTask({ terms, maxCredits: ctx.maxCredits })}`,
-          userText: planUserText(chat.messages()),
-        }),
-      });
-      const reply = await res.json().catch(() => ({}));
-      data = res.ok
-        ? finishAdvisorPlan(reply, env)
-        : { ...rulePlan(state.index, state.programs, ctx), error: `${reply.error || 'Could not reach the advisor.'} Showing the app’s plan instead.` };
-    }
-    if (!data) throw new Error('Pick your degree program on the Degree tab first.');
-    if (data.source === 'claude') {
-      state.plan.ai = data;
-      state.plan.aiFingerprint = fingerprint;
-      state.plan.view = 'advisor';
-      store.set('aiPlan', { plan: data, fingerprint, at: Date.now() });
-      store.set('planView', 'advisor');
-    } else {
-      state.plan.error = data.error || 'The advisor is not available. Showing the app’s plan.';
-    }
-  } catch (err) {
-    state.plan.error = err.message || 'Could not make the plan.';
+    if (!ctx.transcript.length) return;
+    const terms = (state.index.forecast?.terms || []).map((t) => t.label);
+    const res = await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        studentContext: `${studentContextBlock(state.index, 'my degree plan', ctx, state.programs)}\n\n${planTask({ terms, maxCredits: ctx.maxCredits })}`,
+        userText: planUserText(chat.messages()),
+      }),
+    });
+    const reply = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    const data = finishAdvisorPlan(reply, { index: state.index, programs: state.programs, ctx });
+    if (data?.source === 'claude') setPlan(data);
+  } catch {
+    // keep the plan on screen
   } finally {
     state.plan.busy = false;
     renderDegreeTab();
   }
-}
-function setPlanView(view) {
-  state.plan.view = view === 'rules' ? 'rules' : 'advisor';
-  store.set('planView', state.plan.view);
-  renderDegreeTab();
 }
 
 // ---------- time commitments (kept by the chat advisor) ----------
@@ -901,28 +856,13 @@ async function start() {
     onChange: () => renderDegreeTab(), // suggested courses follow the chat
     els: {
       log: $('#chat-log'), form: $('#chat-form'), input: $('#chat-input'), send: $('#chat-send'),
-      clear: $('#chat-clear'), mode: $('#mode-badge'),
+      clear: $('#chat-clear'),
     },
     known,
     // STUDENT CONTEXT is built here in the page; the server adds COURSE DATA from Pop's database
     getContext: (question) => studentContextBlock(state.index, question, readClientContext(chatContext(), state.index), state.programs),
-    offlineAnswer: async (question) => {
-      const base = offlineAnswer(state.index, question, readClientContext(chatContext(), state.index), state.programs);
-      // research questions: add faculty from the directory (the server searches them)
-      if (!RESEARCH_Q.test(question) || !state.health?.faculty) return base;
-      try {
-        const list = (await fetchFaculty(question.slice(0, 200), 5)).slice(0, 5);
-        if (!list.length) return `${base}\n\nI did not find faculty for that topic. Try a field, like "robotics" or "machine learning".`;
-        const lines = list.map((f) => `- **${f.name}** (${f.titles[0] || 'Faculty'}${f.departments.length ? `, ${f.departments[0]}` : ''}): ${(f.matched.length ? f.matched : f.research_interests).slice(0, 3).join('; ') || 'research not listed'}. ${f.profile_url}`);
-        const faculty = `Faculty whose research fits (from IIT's online directory):\n${lines.join('\n')}`;
-        // the course answer only helps when the question names a course
-        if (/\b[A-Za-z]{2,4}\s?\d{3}\b/.test(question)) return `${faculty}\n\n${base}`;
-        return `${faculty}\n\nRead a profile and a recent paper before you email. Ask me which courses prepare you for this research.\n\n_Offline mode: no Claude API key is set, so this answer comes only from the app's data._`;
-      } catch {
-        return base;
-      }
-    },
     onCodeClick: (code) => setQuery(code),
+    onPlanRequest: () => buildPlan(), // the advisor marks replies that change the plan
     resolveProposals: (list) => {
       const t = state.transcript;
       if (!t) return list.map(() => ({ ok: false, label: 'Change', problem: 'Upload your transcript or Degree Works audit on the Degree tab first.' }));
@@ -934,6 +874,7 @@ async function start() {
       if (!t) return;
       for (const c of changes) t = applyChange(t, c);
       setTranscript(t);
+      buildPlan(); // a change made in the chat updates the plan
     },
     onMemory: applyMemory,
     openDegree: () => setTab('degree'),
@@ -949,11 +890,8 @@ async function start() {
     getTranscript: () => state.transcript,
     setTranscript,
     getPrograms: () => state.programs,
-    hasClaude: () => state.health?.mode === 'claude',
     onCode: (code) => setQuery(code),
-    askPlan: askAboutPlan,
-    buildPlan,
-    setPlanView,
+    onNewTranscript: () => { setPlan(null); buildPlan(); }, // a new upload makes a new plan
     catalogTitles: new Map(idx.list.map((c) => [c.code, c.title])),
   });
   $('#replace-transcript').addEventListener('click', () => {

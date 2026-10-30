@@ -171,7 +171,7 @@ function tracksCard(program, completed, inProgress) {
 
 /**
  * Render the whole Degree tab body.
- * ctx: { index, programs, transcript, savedCourses, known, plan: { view, ai, aiStale, busy, error }, hasClaude }
+ * ctx: { index, programs, transcript, savedCourses, known, plan: { ai, busy }, interests }
  * Returns { audit, ruleView, shown } (or null when there is no transcript).
  */
 export function renderDegree(el, ctx) {
@@ -202,7 +202,7 @@ export function renderDegree(el, ctx) {
 
   // which plan to show: the advisor's (if made and chosen) or the app's
   const p = ctx.plan || {};
-  const useAi = p.view === 'advisor' && p.ai;
+  const useAi = !!p.ai;
   const shown = useAi ? addSuggestions(JSON.parse(JSON.stringify(p.ai)), suggestCtx) : ruleView;
   const check = checkPlan(shown, { index, program, records: transcript.courses, done: inputs.done, grades, maxCredits, waivers });
   const t = audit.totals;
@@ -245,28 +245,20 @@ export function renderDegree(el, ctx) {
   const checkLine = errors
     ? `<span class="chk bad">⚠ ${errors} problem${errors === 1 ? '' : 's'} found</span>`
     : '';
-  const source = useAi ? `<span class="src ai">Made by the advisor${p.ai.model ? ` · ${esc(p.ai.model)}` : ''}</span>` : '';
-  let actions = '';
-  if (ctx.hasClaude) {
-    actions += p.busy
-      ? '<button type="button" class="btn primary" disabled><span class="spin"></span> The advisor is building your plan…</button>'
-      : `<button type="button" class="btn primary" data-build-plan>${p.ai ? 'Update plan' : '✨ Personalize with the advisor'}</button>`;
-    if (p.ai && !p.busy) actions += `<button type="button" class="btn" data-plan-view="${useAi ? 'rules' : 'advisor'}">${useAi ? 'Basic plan' : 'Advisor’s plan'}</button>`;
-  }
-  actions += '<button type="button" class="btn" data-ask-plan>Ask about it</button>';
+  // feedback while a new plan is made (after an upload, or a change asked for in the chat)
+  const busyLine = p.busy ? '<p class="plan-busy small muted"><span class="spin"></span> Updating your plan…</p>' : '';
 
   html += `<div class="card plan-card">
       <div class="plan-head">
         <div>
           <h2 class="card-title">Plan</h2>
-          ${source || checkLine ? `<div class="plan-meta">${source}${checkLine}</div>` : ''}
+          ${checkLine ? `<div class="plan-meta">${checkLine}</div>` : ''}
         </div>
         <label class="small muted plan-max">Credits per term
           <select id="max-credits">${[12, 13, 15, 16, 18].map((n) => `<option value="${n}"${n === maxCredits ? ' selected' : ''}>${n}</option>`).join('')}</select>
         </label>
       </div>
-      ${p.error ? `<p class="plan-alert">${esc(p.error)}</p>` : ''}
-      <div class="plan-actions">${actions}</div>
+      ${busyLine}
 `;
   if (usedTerms.length) {
     html += `<div class="timeline">${shown.terms.map((term, i) => (term.items.length ? termCard(term, i, firstIdx, known, titleOf, addFor) : '')).join('')}</div>`;
@@ -328,10 +320,10 @@ export function renderDegree(el, ctx) {
 
 /**
  * els: { drop, file, pasteToggle, pasteBox, pasteText, pasteGo, sample, status, body, clear }
- * hooks: { getTranscript, setTranscript(t), rerender(), hasClaude(), onCode(code), askPlan(text), catalogTitles }
+ * hooks: { getTranscript, setTranscript(t), getPrograms(), onCode(code), onNewTranscript(), catalogTitles }
  */
 export function wireDegree(els, hooks) {
-  let lastInput = null; // { kind, file?, text? } for "Read with Claude"
+  let lastInput = null; // { kind, file?, text? }: the last upload or pasted text
 
   const status = (html, kind = '') => {
     els.status.className = `upload-status ${kind}`;
@@ -373,64 +365,35 @@ export function wireDegree(els, hooks) {
     });
   };
 
-  const claudeButton = () => (hooks.hasClaude()
-    ? ' <button type="button" class="btn" data-read-claude>Read with Claude</button>'
-    : ' Ask the site owner to add a Claude API key to read scanned files, or paste the text instead.');
-
-  async function handleText(text, source, note = '') {
+  /** The sample transcript is plain text in a known layout: read it here. */
+  function readSample(text, source) {
     const { courses, warnings } = parseTranscriptText(text, { catalogTitles: hooks.catalogTitles });
-    if (courses.length >= 3) {
-      apply(courses, source, warnings, { headerText: text });
-      status(`${note}Read <strong>${courses.length}</strong> course rows from ${esc(source)}. Check the list below if anything looks wrong.${hooks.hasClaude() ? ' <button type="button" class="link-btn" data-read-claude>Read again with Claude</button>' : ''}`, note ? 'warn' : 'ok');
-    } else {
-      status(`${note}Only found ${courses.length} course row${courses.length === 1 ? '' : 's'} in ${esc(source)}. It may be a scanned or unusual file.${claudeButton()}`, 'warn');
-    }
-  }
-
-  /** Uploads and pasted text: Claude reads them by default; the app's own parser is the fallback. */
-  async function readInput(text, source) {
-    if (hooks.hasClaude()) {
-      const err = await readWithClaude();
-      if (!err) return;
-      if (!text?.trim()) { status(`${esc(err)}${claudeButton()}`, 'warn'); return; }
-      await handleText(text, source, `Claude could not read it (${esc(err)}), so the app's parser read it instead. `);
-      return;
-    }
-    await handleText(text, source);
+    apply(courses, source, warnings, { headerText: text });
+    status('');
+    hooks.onNewTranscript?.();
   }
 
   async function handleFile(file) {
     if (!file) return;
     if (file.size > MAX_FILE) { status('That file is larger than 8 MB. Try the PDF from Banner, or paste the text.', 'warn'); return; }
     const kind = kindOf(file);
+    if (kind === 'unknown') { status('Use a PDF, HTML, TXT, PNG, or JPG file.', 'warn'); return; }
     lastInput = { kind, file };
     try {
-      if (kind === 'pdf') {
-        status('Reading the PDF…');
-        const text = await pdfToText(file).catch(() => '');
-        lastInput.text = text;
-        if (!text.trim() && !hooks.hasClaude()) { status(`This PDF has no text layer (it may be a scan).${claudeButton()}`, 'warn'); return; }
-        await readInput(text, file.name);
-      } else if (kind === 'text') {
-        const text = await file.text();
-        lastInput.text = text;
-        await readInput(text, file.name);
-      } else if (kind === 'image') {
-        if (!hooks.hasClaude()) { status(`Images need Claude to read them.${claudeButton()}`, 'warn'); return; }
-        await readInput('', file.name);
-      } else {
-        status('Use a PDF, HTML, TXT, PNG, or JPG file.', 'warn');
-      }
+      // the text layer helps find the program in the header; scans have none, which is fine
+      if (kind === 'pdf') lastInput.text = await pdfToText(file).catch(() => '');
+      else if (kind === 'text') lastInput.text = await file.text();
+      await readTranscript();
     } catch (err) {
       console.error(err);
-      status(`Could not read that file (${esc(err.message || 'unknown error')}). Try pasting the text instead.`, 'warn');
+      status('Could not read that file. Try again, or paste the text.', 'warn');
     }
   }
 
-  /** Send the last upload to Claude. Returns '' when it worked, else the error message. */
-  async function readWithClaude() {
-    if (!lastInput) return 'Nothing to read.';
-    status('Claude is reading your transcript… this can take up to a minute.');
+  /** Read the last upload or pasted text on the server. */
+  async function readTranscript() {
+    if (!lastInput) return;
+    status('<span class="spin"></span> Reading your transcript…');
     try {
       let body;
       if (lastInput.file && (lastInput.kind === 'pdf' || lastInput.kind === 'image')) {
@@ -440,16 +403,15 @@ export function wireDegree(els, hooks) {
       }
       const res = await fetch('/api/transcript', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+      if (res.status === 503) throw new Error('Reading transcripts is not available right now. Try again later.');
+      if (!res.ok) throw new Error(data.error || 'Could not read the transcript. Try again.');
       const courses = cleanRecords(data.courses);
-      if (!courses.length) throw new Error('Claude did not find any courses in that file');
-      apply(courses, `${lastInput.file?.name || 'pasted text'} (read by Claude)`, data.warnings || [], { headerText: lastInput.text || '', majors: data.majors || [] });
-      status(`Claude read <strong>${courses.length}</strong> course rows. Check the list below.`, 'ok');
-      return '';
+      if (!courses.length) throw new Error('No courses found in that file. Try the unofficial transcript PDF from Banner.');
+      apply(courses, lastInput.file?.name || 'Pasted transcript', data.warnings || [], { headerText: lastInput.text || '', majors: data.majors || [] });
+      status('');
+      hooks.onNewTranscript?.();
     } catch (err) {
-      const msg = err.message || 'Claude could not read the transcript';
-      status(esc(msg), 'warn');
-      return msg;
+      status(esc(err.message || 'Could not read the transcript. Try again.'), 'warn');
     }
   }
 
@@ -466,24 +428,22 @@ export function wireDegree(els, hooks) {
     const text = els.pasteText.value;
     if (!text.trim()) return;
     lastInput = { kind: 'text', text };
-    readInput(text, 'pasted text');
+    readTranscript();
   });
   els.sample.addEventListener('click', async () => {
     const text = await (await fetch('/samples/sample-transcript.txt')).text();
-    lastInput = { kind: 'text', text };
-    await handleText(text, 'the sample transcript (made-up student)');
+    readSample(text, 'Sample transcript');
   });
   els.clear.addEventListener('click', () => {
     hooks.setTranscript(null);
     status('Transcript cleared from this browser.');
   });
-  els.status.addEventListener('click', (e) => { if (e.target.closest('[data-read-claude]')) readWithClaude(); });
 
   // edits in the body
   els.body.addEventListener('change', (e) => {
     const t = hooks.getTranscript();
     if (!t) return;
-    if (e.target.id === 'program-select') { hooks.setTranscript({ ...t, programId: e.target.value, chosenByUser: true, detected: undefined }); return; }
+    if (e.target.id === 'program-select') { hooks.setTranscript({ ...t, programId: e.target.value, chosenByUser: true, detected: undefined }); hooks.onNewTranscript?.(); return; }
     if (e.target.dataset.applyGroup !== undefined) {
       const code = e.target.value;
       if (!code) return;
@@ -510,7 +470,7 @@ export function wireDegree(els, hooks) {
     const undo = e.target.closest('[data-undo-change]');
     if (undo && t) { hooks.setTranscript(undoChange(t, undo.dataset.undoChange)); return; }
     const setProg = e.target.closest('[data-set-program]');
-    if (setProg && t) { hooks.setTranscript({ ...t, programId: setProg.dataset.setProgram, chosenByUser: true, detected: undefined }); return; }
+    if (setProg && t) { hooks.setTranscript({ ...t, programId: setProg.dataset.setProgram, chosenByUser: true, detected: undefined }); hooks.onNewTranscript?.(); return; }
     const del = e.target.closest('[data-del]');
     if (del && t) {
       const courses = t.courses.slice();
@@ -518,10 +478,6 @@ export function wireDegree(els, hooks) {
       hooks.setTranscript({ ...t, courses });
       return;
     }
-    if (e.target.closest('[data-ask-plan]')) { hooks.askPlan(); return; }
-    if (e.target.closest('[data-build-plan]')) { hooks.buildPlan(); return; }
-    const pv = e.target.closest('[data-plan-view]');
-    if (pv) { hooks.setPlanView(pv.dataset.planView); return; }
     const ps = e.target.closest('[data-plan-search]');
     if (ps) { hooks.onCode(ps.dataset.planSearch); return; }
     const chip = e.target.closest('.req-chip[data-code]');

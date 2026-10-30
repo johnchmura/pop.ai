@@ -194,7 +194,7 @@ export function parseTranscriptText(text, { catalogTitles } = {}) {
     });
   }
 
-  if (!courses.length && lines.length) warnings.push('No course rows were found. Try pasting the transcript text, or use "Read with Claude".');
+  if (!courses.length && lines.length) warnings.push('No course rows were found. Try the unofficial transcript PDF from Banner.');
   return { courses, warnings };
 }
 

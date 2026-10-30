@@ -8,7 +8,6 @@ import { planSemesters } from '../js/core/planner.js';
 import { parseForecastCsv, termFromKey, offeredIn } from '../js/core/forecast.js';
 import { evaluate, meetsMinGrade } from '../js/core/prereq.js';
 import { readClientContext, studentContextBlock, courseDataBlock } from '../js/core/context.js';
-import { offlineAnswer } from '../js/core/offline.js';
 
 const j = (f) => JSON.parse(readFileSync(new URL(`./${f}`, import.meta.url)));
 const forecast = j('data/forecast.json');
@@ -210,7 +209,7 @@ test('plan for a first-year student starts with the intro sequence', () => {
   assert.ok(plan.later.every((i) => i.reason));
 });
 
-test('chat context and offline answers include degree progress', () => {
+test('chat context includes degree progress', () => {
   const ctx = readClientContext({ transcript: sample.courses, programId: 'bs-cs', maxCredits: 15 }, index);
   assert.ok(ctx.completed.includes('CS 331'));
   assert.ok(ctx.inProgress.includes('CS 425'));
@@ -222,11 +221,6 @@ test('chat context and offline answers include degree progress', () => {
   assert.match(data, /DEGREE PROGRAM B\.S\. in Computer Science/);
   assert.match(data, /"futureTerms":\["Spring 2027","Fall 2027","Spring 2028","Fall 2028"\]/);
   assert.match(data, /CS 525: Spring 2027, Fall 2027/);
-  const ans = offlineAnswer(index, "what's left for my degree?", ctx, programs);
-  assert.match(ans, /42 still needed/);
-  assert.match(ans, /Spring 2027/);
-  const none = offlineAnswer(index, 'what is left for my degree', readClientContext({}, index), programs);
-  assert.match(none, /Upload your unofficial transcript/);
   // in-progress MATH 474 counts for CS 480 next term
   const elig = studentContextBlock(index, 'can I take CS 480?', ctx, programs);
   assert.match(elig, /CS 480 Introduction to Artificial Intelligence[\s\S]*Eligibility: prerequisites met/);
