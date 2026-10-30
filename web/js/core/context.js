@@ -256,7 +256,12 @@ export function degreeBlock(index, ctx, programs) {
     }
   }
   for (const g of audit.groups) {
-    lines.push(`- ${g.name}: ${g.status}, ${g.done + g.inProgress + g.planned}/${g.credits} credits${g.courses.length ? ` [${g.courses.map((c) => c.code).join(', ')}]` : ''}${g.remaining.length ? `. Still needed: ${g.remaining.join('; ')}` : ''}`);
+    const minor = g.minorSubject ? ` (minor in ${g.minorSubject}, found from the student's ${g.minorSubject} courses; courses that also count elsewhere are counted in both places, and in the credit total once)` : '';
+    lines.push(`- ${g.name}${minor}: ${g.status}, ${g.done + g.inProgress + g.planned}/${g.credits} credits${g.courses.length ? ` [${g.courses.map((c) => c.code).join(', ')}]` : ''}${g.remaining.length ? `. Still needed: ${g.remaining.join('; ')}` : ''}`);
+  }
+  if (plan.outliers?.length) {
+    lines.push('Small leftovers the plan leaves out (not real courses; mention them briefly when the plan or what is left comes up, and say why they happen, for example a 2-credit or transfer course that left a 1-credit gap; suggest confirming with the adviser):');
+    for (const o of plan.outliers) lines.push(`  - ${o.group}: ${o.credits} credit${o.credits === 1 ? '' : 's'} short`);
   }
   if (ctx.plan?.length) {
     lines.push(`Plan the student sees now on the Degree tab (${ctx.planSource === 'claude' ? 'your earlier recommendation' : 'the app\'s rule-based plan'}):`);

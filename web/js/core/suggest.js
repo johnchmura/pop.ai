@@ -280,7 +280,8 @@ export function addSuggestions(view, { index, program, audit, done = new Set(), 
       const group = groupForItem(it, program);
       if (!group || group.type === 'free') continue;
       const part = group.type === 'hss' ? hssPartFor(it.label) : '';
-      const spec = specFor(group, part, hssGroup);
+      const minor = it.minorSubject || (/^([A-Z]{2,4}) minor course$/.exec(it.label || '') || [])[1];
+      const spec = minor ? { subjects: [minor], minLevel: 200 } : specFor(group, part, hssGroup);
       if (!spec) continue;
       const credits = Number(it.credits) || 3;
       it.suggestions = pickFor(index, spec, { credits, termKey, termLabel, finished, current, grades, blocked, usedHere, fields, home, interests, major });

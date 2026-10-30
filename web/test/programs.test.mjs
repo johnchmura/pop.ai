@@ -143,3 +143,24 @@ test('the server reads changes from the chat context', async () => {
   assert.match(block, /Changes the student applied/);
   assert.match(block, /Free Electives is marked as met \(dean approved\)/);
 });
+
+test('a minor is found from the courses and counted automatically (three ECON courses for an AI major)', async () => {
+  const { neededItems } = await import('../js/core/planner.js');
+  const ai = programs.find((p) => p.id === 'bs-artificial-intelligence');
+  const rec = (code, grade, status = 'completed') => ({ code, title: '', credits: 3, grade, term: 'Fall 2025', status, transfer: false });
+  const records = [rec('ECON 211', 'A'), rec('ECON 251', '', 'in-progress'), rec('ECON 311', 'B'), rec('HUM 200', 'A'), rec('SOC 303', 'A')];
+  const audit = auditDegree(ai, records, { index, planned: [] });
+  const minor = audit.groups.find((g) => g.id === 'minor-requirement');
+  assert.equal(minor.minorSubject, 'ECON');
+  assert.deepEqual(minor.courses.map((c) => c.code).sort(), ['ECON 211', 'ECON 251', 'ECON 311']);
+  assert.equal(minor.creditsLeft, 6);
+  // the same ECON courses still count in the Core Curriculum, and the credit total counts them once
+  const hss = audit.groups.find((g) => g.type === 'hss');
+  assert.ok(hss.courses.some((c) => c.code.startsWith('ECON')));
+  const earned = records.filter((r) => r.status === 'completed').reduce((n, r) => n + r.credits, 0);
+  assert.ok(audit.totals.done <= earned, `${audit.totals.done} <= ${earned}`);
+  // the plan names the minor's subject; no 1-credit slots
+  const items = neededItems(audit, ai, index);
+  assert.ok(items.some((i) => i.label === 'ECON minor course'));
+  assert.ok(items.every((i) => i.code || i.credits >= 2));
+});

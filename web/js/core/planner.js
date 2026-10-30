@@ -62,7 +62,7 @@ export function neededItems(audit, program, index, { exclude = new Set(), electi
     } else if (g.type === 'pick') {
       const from = def.from || {};
       let left = def.count ? def.count - g.courses.length : g.creditsLeft;
-      if (from.codes) {
+      if (from.codes?.length) {
         // choose one listed course: prefer one in the catalog (we know its prerequisites)
         const options = from.codes.filter((c) => !taken.has(c));
         const known = options.filter((c) => index.has(c));
@@ -114,7 +114,9 @@ export function neededItems(audit, program, index, { exclude = new Set(), electi
         const per = g.id === 'ipro' ? 3 : Math.min(3, left);
         while (left > 0) {
           const credits = Math.min(per, left);
-          add({ code: null, label: g.id === 'ipro' ? 'IPRO' : g.name, hint: def.note || '', credits, kind: 'placeholder', group: g.id, groupName: g.name });
+          // a minor found from the courses: name its subject (ECON minor course)
+          const label = g.id === 'ipro' ? 'IPRO' : g.minorSubject ? `${g.minorSubject} minor course` : g.name;
+          add({ code: null, label, hint: g.minorSubject ? `${g.minorSubject} minor` : def.note || '', credits, kind: 'placeholder', group: g.id, groupName: g.name, minorSubject: g.minorSubject || '' });
           left -= credits;
         }
       }
@@ -143,7 +145,16 @@ export function neededItems(audit, program, index, { exclude = new Set(), electi
       }
     }
   }
-  return items;
+  // tiny leftovers (a 1-credit gap from a 2-credit or transfer course) are not courses to plan:
+  // they leave the plan and the advisor explains them in the chat
+  const outliers = [];
+  const kept = items.filter((it) => {
+    if (it.code || it.credits >= 2) return true;
+    outliers.push({ group: it.groupName, credits: it.credits });
+    return false;
+  });
+  kept.outliers = outliers;
+  return kept;
 }
 
 /** How long the chain of needed courses that depends on each item is (longer = take sooner). */
@@ -314,7 +325,7 @@ export function planSemesters(audit, program, index, { done = new Set(), grades 
   const { plan, finished } = placeItems(pending, { index, program, termList, extend: !terms, done, grades, maxCredits, locked });
   const later = pending.filter((it) => !it.placed).map((it) => ({ ...it, reason: laterReason(it, index, finished, grades) }));
   addReasons(plan, pending, index);
-  return { terms: plan, later, items: pending };
+  return { terms: plan, later, items: pending, outliers: items.outliers || [] };
 }
 
 /**
@@ -386,8 +397,9 @@ export function describePlan(plan, audit, { maxCredits = 15 } = {}) {
     terms: plan.terms.map((t) => ({ key: t.key, label: t.label, credits: t.credits, items: t.items.map((it) => ({
       code: it.code || null, label: it.label || '', title: it.title || '', credits: it.credits, kind: it.kind,
       requirement: it.requirement || '', reason: it.reason || '', warning: it.warning || '',
-      options: it.alternatives || it.examples || [],
+      options: it.alternatives || it.examples || [], minorSubject: it.minorSubject || '',
     })) })),
+    outliers: plan.outliers || [],
     later: plan.later.map((it) => ({ code: it.code || null, label: it.label || '', title: it.title || '', credits: it.credits, kind: it.kind, requirement: it.groupName || '', reason: it.reason })),
   };
 }

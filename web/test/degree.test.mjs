@@ -322,3 +322,20 @@ test('advisor memory: saved notes outlast the chat, and the app screen is in the
   assert.match(block, /What the student told you before[\s\S]*Likes machine learning/);
   assert.match(block, /App screen and settings[\s\S]*Credits per term setting: 12/);
 });
+
+test("the advisor's plan is made correct: done and repeated courses dropped, missing ones added, rules enforced", async () => {
+  const { finishAdvisorPlan } = await import('../js/core/plan-ai.js');
+  const ctx = readClientContext({ transcript: sample.courses, programId: 'bs-cs', maxCredits: 15 }, index);
+  const bad = { summary: 'x', terms: [
+    { term: 'Spring 2027', courses: [{ code: 'CS 331' }, { code: 'CS 487' }, { code: 'CS 487' }, { code: 'CS 485' }, { code: 'CS 422' }, { code: 'CS 458' }, { code: 'CS 480' }] }, // CS 331 is done; CS 487 twice; 21 credits
+  ] };
+  const plan = finishAdvisorPlan({ text: JSON.stringify(bad), stopReason: 'end_turn', model: 'm' }, { index, programs, ctx });
+  assert.equal(plan.source, 'claude');
+  const codes = plan.terms.flatMap((t) => t.items).map((i) => i.code).filter(Boolean);
+  assert.ok(!codes.includes('CS 331'), 'done course dropped');
+  assert.equal(codes.filter((c) => c === 'CS 487').length, 1, 'no repeats');
+  for (const req of ['CS 440', 'CS 450']) assert.ok(codes.includes(req), `${req} added`);
+  for (const t of plan.terms) assert.ok(t.credits <= 15, `${t.label} ${t.credits}`);
+  assert.equal(plan.check.issues.filter((x) => x.level === 'error').length, 0, JSON.stringify(plan.check.issues.filter((x) => x.level === 'error')));
+  assert.equal(plan.later.length, 0);
+});

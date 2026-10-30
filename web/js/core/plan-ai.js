@@ -3,8 +3,9 @@
 // credits, coverage). If Claude is not available or fails, the app's rule-based plan is used.
 
 import { degreeContext } from './context.js';
-import { normalizePlan, checkPlan } from './plan-check.js';
-import { describePlan } from './planner.js';
+import { normalizePlan, checkPlan, groupForRequirement } from './plan-check.js';
+import { describePlan, neededItems, repackPlan } from './planner.js';
+import { REPEATABLE } from './transcript.js';
 
 export function planTask({ terms, maxCredits }) {
   return `PLAN TASK
@@ -18,6 +19,7 @@ Hard rules (the app checks these and flags any break):
 - Every prerequisite must be done in an earlier term. A prerequisite marked as "can be taken at the same time" may be in the same term. Courses in progress now count as done.
 - Do not repeat a course the student already passed or is taking now.
 - Keep each term at or under ${maxCredits} credits, unless the student asked for more.
+- Do not add a slot for a requirement that is short by only 1 credit. The app shows those to the student in the chat.
 - Spread electives and IPRO: one or two per term (CS electives, Core Curriculum, IPRO, free electives), not all at the end. When that is not possible, keep them as even as you can.
 - Cover every remaining requirement in DEGREE PROGRESS. Put saved sections in their term.
 - For Core Curriculum, IPRO, science, communication, and free electives you may use a slot with "code": null and a "label" like "Humanities (H) course, 200+". Name a real course only when you know it from COURSE DATA or the degree requirements.
@@ -77,6 +79,7 @@ export function finishAdvisorPlan(reply, { index, programs, ctx }) {
   }
   const saved = d.inputs.locked ? Object.values(d.inputs.locked).flat() : [];
   const { terms: planTerms, droppedTerms } = normalizePlan(raw, { index, program: d.program, audit: d.audit, saved });
+  for (const t of planTerms) t.items = t.items.filter((it) => it.code || it.credits >= 2); // tiny leftovers are explained in the chat, not planned
   if (!planTerms.length) return { ...fallback, error: 'The advisor’s plan had no usable terms. Showing the app’s plan instead.' };
   const notes = new Map((Array.isArray(raw.terms) ? raw.terms : []).map((t) => [String(t?.term || '').toLowerCase(), String(t?.note || '').slice(0, 240)]));
   for (const t of planTerms) t.note = notes.get(t.label.toLowerCase()) || '';
@@ -92,6 +95,57 @@ export function finishAdvisorPlan(reply, { index, programs, ctx }) {
     program: d.program.id,
   };
   if (droppedTerms.length) plan.assumptions.push(`Left out terms the app has no forecast for: ${droppedTerms.join(', ')}.`);
-  plan.check = checkPlan(plan, { index, program: d.program, records: ctx.transcript, done: d.inputs.done, grades: ctx.grades, maxCredits: ctx.maxCredits, waivers: ctx.waivers });
-  return plan;
+  const fixed = enforcePlan(plan, { index, d, ctx });
+  fixed.check = checkPlan(fixed, { index, program: d.program, records: ctx.transcript, done: d.inputs.done, grades: ctx.grades, maxCredits: ctx.maxCredits, waivers: ctx.waivers });
+  // a plan that still breaks a rule is never shown: the app's plan is used instead
+  if (fixed.check.issues.some((x) => x.level === 'error')) return { ...fallback, error: 'The advisor’s plan broke a rule.' };
+  return fixed;
 }
+
+/**
+ * Make the advisor's plan correct by construction, keeping its choices and order:
+ * drop courses that are done or listed twice, add anything the degree still needs that the plan
+ * left out, then place every course with the app's rules (prerequisites first, offered that term,
+ * within the credit limit, electives spread out).
+ */
+export function enforcePlan(plan, { index, d, ctx }) {
+  const done = d.inputs.done;
+  const seen = new Set();
+  const flat = [];
+  for (const t of plan.terms) {
+    for (const it of t.items) {
+      if (it.kind === 'saved') continue; // saved sections are placed from the schedule
+      if (it.code && ((done.has(it.code) && !REPEATABLE.has(it.code)) || (seen.has(it.code) && !REPEATABLE.has(it.code)))) continue;
+      if (it.code) seen.add(it.code);
+      flat.push(it);
+    }
+  }
+  const needed = neededItems(d.audit, d.program, index, { exclude: done });
+  const groupOf = (it) => (it.group ? it.group : groupForRequirement(it.requirement || it.label, d.program));
+  // required and chosen courses the plan left out
+  for (const n of needed) {
+    if (!n.code) continue;
+    const covered = seen.has(n.code) || (n.alternatives || []).some((c) => seen.has(c));
+    if (!covered) { flat.push(toItem(n)); seen.add(n.code); }
+  }
+  // open slots: enough credits in each group (a course the advisor named for a group counts there)
+  const planned = new Map();
+  for (const it of flat) { const g = groupOf(it); if (g) planned.set(g, (planned.get(g) || 0) + (Number(it.credits) || 3)); }
+  const neededCr = new Map();
+  for (const n of needed) neededCr.set(n.group, (neededCr.get(n.group) || 0) + n.credits);
+  for (const n of needed) {
+    if (n.code) continue;
+    const have = planned.get(n.group) || 0;
+    if (have >= (neededCr.get(n.group) || 0)) continue;
+    flat.push(toItem(n));
+    planned.set(n.group, have + n.credits);
+  }
+  const view = { ...plan, terms: [{ key: plan.terms[0]?.key || '', label: plan.terms[0]?.label || '', items: flat }], later: [] };
+  const fixed = repackPlan(view, { index, program: d.program, done, grades: ctx.grades, maxCredits: ctx.maxCredits, locked: d.inputs.locked });
+  return { ...fixed, source: 'claude', maxCredits: ctx.maxCredits };
+}
+
+const toItem = (n) => ({
+  code: n.code || null, label: n.label || '', title: n.title || '', credits: n.credits, kind: n.kind,
+  requirement: n.groupName || '', reason: '', group: n.group, options: n.alternatives || n.examples || [], minorSubject: n.minorSubject || '',
+});

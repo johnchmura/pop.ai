@@ -227,6 +227,33 @@ function remainingText(group, result, creditsLeft, index) {
   return [`${creditsLeft} more credit${creditsLeft === 1 ? '' : 's'} from ${where}`];
 }
 
+/** A minor group the catalog leaves open ("Fifteen credits in an area outside computer science"). */
+const isOpenMinor = (g) => g.type === 'pick' && /minor/i.test(g.name) && !g.from?.codes?.length && !g.from?.subjects?.length;
+
+/**
+ * The minor's subject, found from the courses: the subject with the most courses outside the
+ * major's own requirements (three ECON courses -> an ECON minor). Needs at least two courses.
+ */
+export function detectMinorSubject(program, pool) {
+  const major = new Set();
+  for (const g of program.groups) {
+    for (const slot of g.slots || []) for (const option of slot) for (const c of option) major.add(subject(c));
+    for (const c of g.from?.codes || []) major.add(subject(c));
+    for (const sub of g.from?.subjects || []) major.add(sub);
+  }
+  const counts = new Map();
+  for (const p of pool) {
+    const sub = subject(p.code);
+    if (major.has(sub) || sub === 'IPRO') continue;
+    const c = counts.get(sub) || { n: 0, credits: 0 };
+    counts.set(sub, { n: c.n + 1, credits: c.credits + p.credits });
+  }
+  // most courses first; on a tie, the subject outside the Core Curriculum humanities (a real minor, not core courses)
+  const core = new Set(['HUM', 'COM']);
+  const best = [...counts].sort((a, b) => b[1].n - a[1].n || (core.has(a[0]) - core.has(b[0])) || b[1].credits - a[1].credits)[0];
+  return best && best[1].n >= 2 ? best[0] : '';
+}
+
 /**
  * Run the audit.
  * Returns { program, groups: [...], totals, extra (courses that did not fit), notCounted }.
@@ -256,7 +283,27 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
     }
     // courses that were applied to another group are not available here
     const view = pool.filter((p) => !p.force || p.force === group.id);
-    if (group.type === 'all') result = auditAll(group, view);
+    let minorSubject = '';
+    let double = null;
+    if (isOpenMinor(group) && !forced.length) {
+      minorSubject = detectMinorSubject(program, pool);
+      if (minorSubject) {
+        // counted here as well as where they already count; the credit total counts them once
+        // the minor reads these courses without taking them from other groups; the credit total
+        // counts a course once (see `double`, filled in after every group is audited)
+        const used = [];
+        let total = 0;
+        for (const p of pool.filter((x) => subject(x.code) === minorSubject).sort(byStatus)) {
+          if (total >= group.credits) break;
+          used.push(p);
+          total += p.credits;
+        }
+        result = { used };
+        double = { completed: 0, 'in-progress': 0, planned: 0, of: used };
+      }
+    }
+    if (result) { /* the minor, above */ }
+    else if (group.type === 'all') result = auditAll(group, view);
     else if (group.type === 'pick') result = auditPick(group, view);
     else if (group.type === 'hss') result = auditHss(group, view);
     else result = auditFree(group, view);
@@ -300,12 +347,23 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
       remaining: status === 'done' || status === 'in-progress' || status === 'planned' ? [] : remainingText(group, result, creditsLeft, index),
       slots: result.slots || null,
       parts: result.parts ? result.parts.map((p) => ({ id: p.id, label: p.label, need: p.need, have: p.have.map((h) => h.code), problem: p.problem || '' })) : null,
+      minorSubject,
+      double,
     };
   });
 
+  // minor courses that another group also counts: their credits are already in the total
+  for (const g of groups) {
+    if (!g.double?.of) continue;
+    for (const p of g.double.of) { if (p.used && p.used !== g.id) g.double[p.status] += p.credits; else p.used = g.id; }
+    delete g.double.of;
+  }
+  // minor courses no other group used still count toward the credit total, once
   const applied = (status) => groups.reduce((s, g) => {
     const capped = Math.min(g.credits, g.done + (status !== 'completed' ? g.inProgress : 0) + (status === 'planned' ? g.planned : 0));
-    return s + capped;
+    // a course counted in two groups (the minor) adds its credits once
+    const d = g.double ? g.double.completed + (status !== 'completed' ? g.double['in-progress'] : 0) + (status === 'planned' ? g.double.planned : 0) : 0;
+    return s + capped - Math.min(capped, d);
   }, 0);
   const done = applied('completed');
   const withIp = applied('in-progress');
