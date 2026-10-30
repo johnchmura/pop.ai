@@ -5,7 +5,7 @@ import { search, highlightPieces } from './core/search.js';
 import { normalizeCode, treeToText, evaluate, missingParts } from './core/prereq.js';
 import { esc, $, $$, store, linkCodes, debounce } from './ui/util.js';
 import { renderSchedule, wireSchedule } from './ui/schedule-view.js';
-import { renderGraph, renderDetail, wireGraphHover } from './ui/graph-view.js';
+import { renderGraph, wireGraphHover } from './ui/graph-view.js';
 import { createChat } from './ui/chat.js';
 import { initSplitter } from './ui/splitter.js';
 import { createSettings } from './ui/settings.js';
@@ -589,7 +589,10 @@ function renderScheduleTab() {
   scheduleLayout = renderSchedule({ index: state.index, savedCrns: state.saved, busy: state.busy, els: els.schedule });
 }
 
+let graphPin = null; // { code, focus }: the graph stays put while the left side shows a clicked course
 function graphFocus() {
+  if (graphPin && state.query.trim() === graphPin.code) return graphPin.focus;
+  graphPin = null;
   if (state.graphFilter.length) return state.graphFilter.slice(0, 8);
   if (state.focus.length) return state.focus.slice(0, 6);
   if (state.query.trim() && state.results.length) return state.results.slice(0, 3).map((r) => r.course.code);
@@ -637,6 +640,7 @@ function renderGraphTab() {
     addButton: addCourseButton,
     suggestions: graphSuggestions(),
   });
+  els.graph.detail.hidden = true; // a clicked course shows on the left, in search
   $('#graph-clear').hidden = !state.graphFilter.length;
 }
 
@@ -778,9 +782,13 @@ function wire() {
   els.graph.scroll.addEventListener('click', (e) => {
     const node = e.target.closest('.gnode');
     if (!node) return;
-    state.graphSelected = node.dataset.code;
-    for (const g of $$('.gnode', els.graph.scroll)) g.classList.toggle('selected', g.dataset.code === state.graphSelected);
-    renderDetail({ index: state.index, code: state.graphSelected, completed: completedSet(), planned: plannedCourses(), els: els.graph, addButton: addCourseButton });
+    const code = node.dataset.code;
+    if (!state.index.get(code)) return; // not in this catalog
+    // show the course on the left, like a search, and keep this graph in place
+    const focus = graphFocus();
+    state.graphSelected = code;
+    graphPin = { code, focus };
+    setQuery(code, { focusInput: false });
   });
   els.graph.scroll.addEventListener('keydown', (e) => {
     const node = e.target.closest('.gnode');
