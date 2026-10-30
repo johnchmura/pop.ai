@@ -18,7 +18,7 @@ test('commitments: clean input, bad input is dropped', () => {
   assert.equal(cleanCommitments('nope').length, 0);
   assert.equal(hoursFromInput('14:30'), 14.5);
   assert.ok(Number.isNaN(hoursFromInput('')));
-  assert.equal(describeCommitment(c), 'Work: Mon Wed Fri, 3:00pm-7:00pm');
+  assert.equal(describeCommitment(c), 'Work: Mon Wed Fri, 3:00 PM–7:00 PM');
   assert.equal(commitmentBlocks([c]).length, 3);
 });
 

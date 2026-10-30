@@ -126,7 +126,7 @@ function termCard(term, i, firstIdx, known, titleOf, addFor) {
   return `<section class="term${i === firstIdx ? ' next' : ''}">
       <header class="term-head">
         <h3>${i === firstIdx ? '<span class="next-badge">Next</span>' : ''}${esc(term.label)}</h3>
-        <span class="term-cr">${term.credits} credits</span>
+        <span class="term-cr">${term.credits} cr</span>
       </header>
       ${term.note ? `<p class="term-note">${esc(term.note)}</p>` : ''}
       <ul class="term-list">${term.items.map((it) => planRow(it, known, titleOf, addFor(term))).join('')}</ul>
@@ -307,7 +307,7 @@ export function renderDegree(el, ctx) {
       <td><button type="button" class="saved-remove" data-del="${i}" aria-label="Remove ${esc(r.code)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></td>
     </tr>`).join('');
   html += `<details class="card t-card"${tableWasOpen ? ' open' : ''}>
-      <summary><span class="card-title">Transcript courses (${transcript.courses.length})</span></summary>
+      <summary><span class="card-title">Transcript courses</span><span class="small muted">${transcript.courses.length} courses</span></summary>
       ${transcript.warnings?.length ? `<ul class="t-warn">${transcript.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
       <div class="t-scroll"><table class="t-table">
         <thead><tr><th>Course</th><th>Title</th><th>Term</th><th>Credits</th><th>Grade</th><th>Status</th><th></th></tr></thead>

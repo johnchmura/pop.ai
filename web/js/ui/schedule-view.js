@@ -1,7 +1,7 @@
 // Schedule tab: saved sections list + weekly grid.
 // The grid uses the pop.ai layout from core/schedule.js.
 
-import { buildBlocks, gridBounds, findConflicts, DAY_LABELS, formatHour } from '../core/schedule.js';
+import { buildBlocks, gridBounds, findConflicts, DAY_LABELS, formatHour, formatRange } from '../core/schedule.js';
 import { creditNumber } from '../core/catalog.js';
 import { commitmentBlocks, sectionClashes } from '../core/commitments.js';
 import { esc, colorFamily } from './util.js';
@@ -11,7 +11,7 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 function meetingSummary(section) {
   const real = section.meetings.filter((m) => m.days && m.days !== 'TBA' && m.time && m.time !== 'TBA');
   if (!real.length) return section.bucket === 'Internet' ? 'Online · no meeting time' : 'Time TBA';
-  return real.map((m) => `${m.days} ${m.time.replace(/\s*-\s*/, '–').replace(/ (AM|PM)/g, (x, ap) => ap.toLowerCase())}`).join(', ');
+  return real.map((m) => `${m.days} ${formatRange(m.time)}`).join(', ');
 }
 
 export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onOpenCourse }) {
@@ -35,7 +35,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
   const courseCodes = [...new Set(items.map((i) => i.label))];
   const credits = courseCodes.reduce((sum, code) => sum + creditNumber(index.get(code)), 0);
   els.summary.textContent = items.length
-    ? `${courseCodes.length} course${courseCodes.length === 1 ? '' : 's'} · ${credits} credits`
+    ? `${courseCodes.length} course${courseCodes.length === 1 ? '' : 's'} · ${credits} cr`
     : '';
 
   if (!items.length) {
@@ -51,7 +51,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
         : '';
       const busyHits = sectionClashes(s, busy);
       const busyText = busyHits.length ? `<span class="conflict-note">Conflicts with ${[...new Set(busyHits.map((h) => esc(h.label)))].join(', ')}</span>` : '';
-      const seats = s.available == null ? '' : `<small>${s.available} seat${s.available === 1 ? '' : 's'} open · CRN ${esc(s.crn)}</small>`;
+      const seats = s.available == null ? '' : `<small>${s.available} open · CRN ${esc(s.crn)}</small>`;
       return `<div class="saved-item c-${fam}${clash.length || busyHits.length ? ' has-conflict' : ''}" data-crn="${esc(s.crn)}">
           <div>
             <button type="button" class="saved-code" data-open="${esc(s.course)}">${esc(s.course)}${s.scheduleType && s.scheduleType !== 'Lecture' ? ` <span class="sub" style="font-size:14px;font-weight:500">· ${esc(s.scheduleType)}</span>` : ''}</button>
@@ -72,7 +72,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
   for (let h = start; h < end; h++) hours.push(h);
   let html = `<div class="h corner"></div>${days.map((d) => `<div class="h">${DAY_LABELS[d]}</div>`).join('')}`;
   for (const h of hours) {
-    html += `<div class="t">${formatHour(h)}</div>`;
+    html += `<div class="t">${formatHour(h, false)}</div>`;
     for (let i = 0; i < cols; i++) html += '<div class="c"></div>';
   }
   html += '<div class="blocks" id="sched-blocks"></div>';

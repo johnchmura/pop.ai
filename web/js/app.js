@@ -5,6 +5,7 @@ import { search, highlightPieces } from './core/search.js';
 import { normalizeCode, treeToText, evaluate, missingParts } from './core/prereq.js';
 import { esc, $, $$, store, linkCodes, debounce } from './ui/util.js';
 import { renderSchedule, wireSchedule } from './ui/schedule-view.js';
+import { formatRange } from './core/schedule.js';
 import { renderGraph, wireGraphHover } from './ui/graph-view.js';
 import { createChat } from './ui/chat.js';
 import { initSplitter } from './ui/splitter.js';
@@ -189,7 +190,7 @@ function runSearch() {
 function sectionRow(s) {
   const added = state.saved.includes(s.crn);
   const meetings = s.meetings.map((m) => {
-    const when = [m.days && m.days !== 'TBA' ? m.days : '', m.time && m.time !== 'TBA' ? m.time : ''].filter(Boolean).join(' ') || 'Time TBA';
+    const when = [m.days && m.days !== 'TBA' ? m.days : '', m.time && m.time !== 'TBA' ? formatRange(m.time) : ''].filter(Boolean).join(' ') || 'Time TBA';
     const who = m.instructors.length ? ` · ${m.instructors.join(', ')}` : '';
     return `${hl(when)} · ${hl(m.where || 'TBA')}${hl(who)}`;
   }).join('<br>');
@@ -222,7 +223,7 @@ function addCourseButton(code) {
 
 /** One line for a section in the picker: "Lecture · MW 11:25 AM - 12:40 PM · 40 open". */
 function sectionLine(s) {
-  const when = s.meetings.map((m) => [m.days && m.days !== 'TBA' ? m.days : '', m.time && m.time !== 'TBA' ? m.time : ''].filter(Boolean).join(' ')).filter(Boolean).join(', ') || 'Time TBA';
+  const when = s.meetings.map((m) => [m.days && m.days !== 'TBA' ? m.days : '', m.time && m.time !== 'TBA' ? formatRange(m.time) : ''].filter(Boolean).join(' ')).filter(Boolean).join(', ') || 'Time TBA';
   const seats = s.available == null ? '' : s.available <= 0 ? ' · Full' : ` · ${s.available} open`;
   const clash = sectionClashes(s, state.busy).length ? ' · clashes' : '';
   return `${s.scheduleType || 'Section'}${s.bucket && s.bucket !== 'Class' ? ` (${s.bucket})` : ''} · ${when}${seats}${clash}`;
@@ -269,7 +270,7 @@ function courseCard(course) {
   const head = `<div class="course-head">
       <span class="course-code">${hl(course.code)}</span>
       <span class="course-title">${hl(course.title)}</span>
-      ${detail > 1 ? `<span class="course-credits">${esc(course.credits || '?')} credit${course.credits === '1' ? '' : 's'}</span>` : ''}
+      ${detail > 1 ? `<span class="course-credits">${esc(course.credits || '?')} cr</span>` : ''}
     </div>`;
   if (detail === 1) {
     return `<article class="course compact" data-expand="${esc(course.code)}" tabindex="0" title="Click to expand ${esc(course.code)}">${head}${course.sections.length ? `<div class="compact-add">${addCourseButton(course.code)}</div>` : ''}</article>`;
@@ -447,7 +448,7 @@ function appScreen() {
   const f = state.filters;
   const program = state.programs.find((p) => p.id === state.transcript?.programId);
   const d = state.transcript?.detected;
-  const tabNames = { chat: 'Advisor', schedule: 'Schedule', degree: 'Degree', graph: 'Prerequisite Graph' };
+  const tabNames = { chat: 'Advisor', schedule: 'Schedule', degree: 'Degree', graph: 'Graph' };
   const filters = [
     f.subjects.length ? `department ${f.subjects.join(', ')}` : '',
     f.levels.length ? `levels ${f.levels.map((l) => `${l}s`).join(', ')}` : '',

@@ -1348,3 +1348,6 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 /* the search box lines up with the content below it (the card's padding sits outside the column) */
 .search-card { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; }
 @media (max-width: 960px) { .search-card { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; } }
+
+/* consistency: buttons use sentence case like every other control */
+.pill { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; }

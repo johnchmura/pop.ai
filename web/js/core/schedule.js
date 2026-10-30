@@ -41,13 +41,19 @@ export function parseRange(time) {
   return { start, end };
 }
 
-/** "13.5" -> "1:30pm" */
+/** "13.5" -> "1:30 PM" (the one time format used everywhere in the app) */
 export function formatHour(h, withMinutes = true) {
   const hh = Math.floor(h + 1e-9);
   const mm = Math.round((h - hh) * 60);
-  const suffix = hh >= 12 && hh < 24 ? 'pm' : 'am';
+  const suffix = hh >= 12 && hh < 24 ? 'PM' : 'AM';
   const h12 = ((hh + 11) % 12) + 1;
-  return withMinutes ? `${h12}:${String(mm).padStart(2, '0')}${suffix}` : `${h12}${suffix}`;
+  return withMinutes ? `${h12}:${String(mm).padStart(2, '0')} ${suffix}` : `${h12} ${suffix}`;
+}
+
+/** A meeting time from the data ("5 PM - 6:15 PM") in the app's format ("5:00 PM–6:15 PM"). */
+export function formatRange(time) {
+  const r = parseRange(time);
+  return r ? `${formatHour(r.start)}–${formatHour(r.end)}` : String(time || '');
 }
 
 /**

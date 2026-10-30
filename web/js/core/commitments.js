@@ -67,7 +67,7 @@ export function courseFits(course, list) {
 export const dayWords = (days) => [...days].map((l) => DAY_LABELS[DAY_LETTERS.indexOf(l)]).map((d) => d[0] + d.slice(1).toLowerCase()).join(' ');
 
 /** One plain line per commitment (Degree/Chat context and the list in the UI). */
-export const describeCommitment = (c) => `${c.label}: ${dayWords(c.days)}, ${formatHour(c.start)}-${formatHour(c.end)}`;
+export const describeCommitment = (c) => `${c.label}: ${dayWords(c.days)}, ${formatHour(c.start)}–${formatHour(c.end)}`;
 
 // ----- memory: the chat advisor saves commitments from what the student says -----
 //   ```advisor-memory

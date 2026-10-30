@@ -203,7 +203,7 @@ export function scheduleFacts(index, ctx) {
   const conflicts = findConflicts(blocks).map((c) => {
     const a = index.crnMap.get(c.a);
     const b = index.crnMap.get(c.b);
-    return `${a.course} (CRN ${a.crn}) and ${b.course} (CRN ${b.crn}) overlap on ${DAY_LABELS[c.day]} ${formatHour(c.start)}-${formatHour(c.end)}`;
+    return `${a.course} (CRN ${a.crn}) and ${b.course} (CRN ${b.crn}) overlap on ${DAY_LABELS[c.day]} ${formatHour(c.start)}–${formatHour(c.end)}`;
   });
   const courses = [...new Set(items.map((i) => i.label))];
   const credits = courses.reduce((sum, code) => sum + creditNumber(index.get(code)), 0);
