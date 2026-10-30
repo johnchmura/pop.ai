@@ -69,9 +69,6 @@
         <div id="results" hidden></div>
       </div>
 
-      <footer class="left-footer">
-        <p>Not an official Illinois Tech service. Built on <a href="https://github.com/johnchmura/pop.ai" target="_blank" rel="noopener noreferrer">Pop</a> (from Evan Wallace’s Soda).</p>
-      </footer>
     </main>
 
     <!-- ================= RIGHT: tabs ================= -->
@@ -146,8 +143,8 @@
         <div class="card upload-card">
           <div class="upload-summary">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/></svg>
-            <span class="us-text"><strong>Transcript loaded</strong><span id="upload-summary-text" class="muted small"></span></span>
-            <button type="button" class="btn" id="replace-transcript">Upload a new one</button>
+            <span class="us-text"><span id="upload-summary-text"></span></span>
+            <button type="button" class="btn" id="replace-transcript">Replace</button>
             <button type="button" class="link-btn" id="clear-transcript-2">Clear</button>
           </div>
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload your unofficial transcript">

@@ -440,7 +440,7 @@ function renderDegreeTab() {
   card.classList.toggle('compact', hasT && !card.classList.contains('replacing'));
   $('#degree-intro').hidden = hasT && !card.classList.contains('replacing');
   const sum = $('#upload-summary-text');
-  if (sum) sum.textContent = hasT ? `${state.transcript.source || 'Your transcript'} · ${state.transcript.courses.length} course rows` : '';
+  if (sum) sum.textContent = hasT ? `${state.transcript.source || 'Transcript'} · ${state.transcript.courses.length} courses` : '';
   if (state.tab !== 'degree') return;
   lastDegree = renderDegree($('#degree-body'), {
     index: state.index,

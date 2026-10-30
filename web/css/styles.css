@@ -1298,3 +1298,9 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 .sug-star, .code-link.chat { color: var(--focus); }
 .sug-star { margin-right: 4px; font-size: 11px; }
 .program-inline select { field-sizing: content; }
+.audit-note { margin: 4px 0 24px; text-align: center; } .audit-note a { color: inherit; }
+details.left-card > summary { cursor: pointer; list-style: none; margin: 0; }
+details.left-card > summary::-webkit-details-marker { display: none; }
+details.left-card > summary .card-title::before { content: '▸ '; color: var(--muted); }
+details.left-card[open] > summary { margin-bottom: 12px; }
+details.left-card[open] > summary .card-title::before { content: '▾ '; }
