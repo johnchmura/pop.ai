@@ -1316,3 +1316,10 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 /* the "taken" check: a small green circle, same everywhere (badges, buttons, graph nodes) */
 .chk-ic { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 5px; border-radius: 50%; background: var(--ok); color: #fff; font-size: 9px; font-weight: 900; line-height: 1; vertical-align: -2px; }
 .btn.on { display: inline-flex; align-items: center; }
+
+/* graph: taken courses are green (no tick on the node); the key shows what green means */
+.gnode.done rect { fill: var(--ok-bg); stroke: var(--ok); }
+.gnode.done text { fill: var(--ok); }
+.lg-taken { display: inline-grid; place-items: center; width: 28px; height: 14px; border-radius: 7px; background: var(--ok-bg); border: 1px solid var(--ok); }
+.lg-taken .chk-ic { width: 10px; height: 10px; font-size: 7px; margin: 0; vertical-align: 0; }
+.lg-taken svg { width: 11px; height: 11px; fill: none; stroke: var(--ok); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

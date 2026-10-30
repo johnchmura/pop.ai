@@ -86,8 +86,7 @@ export function renderGraph({ index, focus, options, completed, planned, els, se
     out += `<g class="${cls}" data-code="${esc(n.code)}" tabindex="0" role="button" aria-label="${esc(tip)}" transform="translate(${n.x - nodeW / 2},${n.y - nodeH / 2})">
         <title>${esc(tip)}</title>
         <rect width="${nodeW}" height="${nodeH}" rx="${nodeH / 2}"/>
-        <text x="${nodeW / 2 + (done ? 8 : 0)}" y="${nodeH / 2}">${esc(n.code)}</text>
-        ${done ? `<g class="tick" aria-hidden="true"><circle cx="14" cy="${nodeH / 2}" r="6.5"/><path d="M10.9 ${nodeH / 2} l2.2 2.2 l4 -4.2"/></g>` : ''}
+        <text x="${nodeW / 2}" y="${nodeH / 2}">${esc(n.code)}</text>
       </g>`;
   }
   out += '</g>';
