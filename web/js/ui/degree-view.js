@@ -83,6 +83,22 @@ function linkify(text, known) {
   return esc(text).replace(/\b([A-Z]{2,4}) (\d{3})\b/g, (m) => (known(m) ? `<button type="button" class="code-link" data-code="${m}">${m}</button>` : m));
 }
 
+/**
+ * The one way the Degree tab shows course choices: chips with code and title, a star when the
+ * course matches what the student said or the major, three at a time and "+N" for the rest.
+ * Open slots show their suggestions (or the program's list); a placed course shows its alternatives after "or".
+ */
+function courseChips(it, known, titleOf) {
+  const list = (it.code ? (it.options || []) : (it.suggestions?.length ? it.suggestions : (it.options || []))).filter((c) => known(c));
+  if (!list.length) return '';
+  const chip = (c, hidden) => {
+    const title = titleOf(c);
+    const why = starReason(it, c);
+    return `<button type="button" class="code-link sug${why ? ' chat' : ''}${hidden ? ' extra' : ''}" data-code="${esc(c)}" title="${esc(`${title ? `${c}: ${title}` : c}${why ? ` · ${why}` : ''}`)}">${why ? `<span class="sug-star" aria-label="${esc(why)}">★</span>` : ''}${esc(c)}${title ? `<span class="sug-title"> ${esc(title)}</span>` : ''}</button>`;
+  };
+  return `<div class="pr-options pr-suggest">${it.code ? '<span class="small muted">or</span>' : ''}${list.map((c, i) => chip(c, i >= 3)).join('')}${list.length > 3 ? `<button type="button" class="sug more-chips" data-more-chips title="Show all ${list.length}">+${list.length - 3}</button>` : ''}</div>`;
+}
+
 /** One course row in a term card. */
 function planRow(it, known, titleOf = () => '', addButton = () => '') {
   const k = KIND[it.kind] || KIND.choice;
@@ -100,12 +116,7 @@ function planRow(it, known, titleOf = () => '', addButton = () => '') {
         <span class="pr-cr">${esc(it.credits)} cr</span>
         ${addButton(it.code)}
       </div>
-      ${it.suggestions?.length ? `<div class="pr-options pr-suggest">${it.suggestions.map((c) => {
-    const title = titleOf(c);
-    const why = starReason(it, c);
-    return `<button type="button" class="code-link sug${why ? ' chat' : ''}" data-code="${esc(c)}" title="${esc(`${title ? `${c}: ${title}` : c}${why ? ` · ${why}` : ''}`)}">${why ? `<span class="sug-star" aria-label="${esc(why)}">★</span>` : ''}${esc(c)}${title ? `<span class="sug-title"> ${esc(title)}</span>` : ''}</button>`;
-  }).join('')}</div>` : ''}
-      ${it.options?.length ? `<div class="pr-options"><span class="small muted">${it.code ? 'Or' : 'Pick one'}:</span> ${(() => { const opts = it.options.filter((c) => known(c)); return opts.slice(0, 3).map((c) => `<button type="button" class="code-link${starReason(it, c) ? ' chat' : ''}" data-code="${esc(c)}"${starReason(it, c) ? ` title="${esc(starReason(it, c))}"` : ''}>${starReason(it, c) ? '★ ' : ''}${esc(c)}</button>`).join(' ') + (opts.length > 3 ? ` <span class="small muted" title="${esc(opts.slice(3).join(', '))}">+${opts.length - 3} more</span>` : ''); })()}</div>` : ''}
+      ${courseChips(it, known, titleOf)}
       ${tag && it.code && k.tag ? `<div class="pr-sub"><span class="pr-tag">${esc(tag)}</span></div>` : ''}
       ${issues.map((x) => `<div class="pr-issue ${x.level}">${x.level === 'error' ? '⚠' : '•'} ${esc(x.message)}</div>`).join('')}
     </li>`;
@@ -470,6 +481,8 @@ export function wireDegree(els, hooks) {
     hooks.setTranscript({ ...t, courses });
   });
   els.body.addEventListener('click', (e) => {
+    const more = e.target.closest('[data-more-chips]');
+    if (more) { more.parentElement.classList.add('all'); more.remove(); return; }
     const t = hooks.getTranscript();
     const undo = e.target.closest('[data-undo-change]');
     if (undo && t) {

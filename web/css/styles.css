@@ -1332,3 +1332,9 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 .clear-confirm .btn { padding: 5px 12px; font-size: 12px; }
 .btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .btn.danger:hover { filter: brightness(1.08); }
+
+/* course choices on the Degree tab: one chip style everywhere; three shown, "+N" reveals the rest */
+.pr-suggest .sug.extra { display: none; }
+.pr-suggest.all .sug.extra { display: inline-flex; }
+.pr-suggest .more-chips { font-weight: 700; color: var(--muted); cursor: pointer; }
+.pr-suggest > .small.muted { align-self: center; }
