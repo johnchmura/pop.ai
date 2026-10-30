@@ -85,7 +85,7 @@ function planRow(it, known, titleOf = () => '', addButton = () => '') {
     : `<span class="pr-code open">${esc(it.label || it.requirement || 'Elective')}</span>`;
   // "One of A, B, C" repeats the options list shown above it
   const reason = !it.code && it.options?.length && /^One of /.test(it.reason || '') ? '' : (it.reason || '');
-  const issues = [...(it.issues || []), ...(it.warning ? [{ level: 'warn', message: it.warning }] : [])];
+  const issues = (it.issues || []).filter((x) => x.level === 'error');
   const plainReason = reason.replace(/\s+/g, ' ').trim();
   return `<li class="pr ${k.cls}"${plainReason ? ` title="${esc(plainReason)}"` : ''}>
       <div class="pr-top">
@@ -235,10 +235,9 @@ export function renderDegree(el, ctx) {
 
   // ----- 2. recommended plan -----
   const errors = check.issues.filter((x) => x.level === 'error').length;
-  const warns = check.issues.filter((x) => x.level === 'warn').length;
   const checkLine = errors
     ? `<span class="chk bad">⚠ ${errors} problem${errors === 1 ? '' : 's'} found</span>`
-    : warns ? `<span class="chk warn">Checked · ${warns} note${warns === 1 ? '' : 's'}</span>` : '';
+    : '';
   const source = useAi ? `<span class="src ai">Made by the advisor${p.ai.model ? ` · ${esc(p.ai.model)}` : ''}</span>` : '';
   let actions = '';
   if (ctx.hasClaude) {
@@ -260,17 +259,16 @@ export function renderDegree(el, ctx) {
         </label>
       </div>
       ${p.error ? `<p class="plan-alert">${esc(p.error)}</p>` : ''}
-      ${useAi && p.aiStale ? '<p class="plan-alert">Your courses or saved sections changed since the advisor made this plan. Update it to include the changes.</p>' : ''}
       <div class="plan-actions">${actions}</div>
 `;
   if (usedTerms.length) {
     html += `<div class="timeline">${shown.terms.map((term, i) => (term.items.length ? termCard(term, i, firstIdx, known, titleOf, addFor) : '')).join('')}</div>`;
   }
   if (shown.later?.length) {
-    html += `<section class="term later"><header class="term-head"><h3>Not placed yet</h3></header><ul class="term-list">${shown.later.map((it) => planRow({ ...it, issues: [{ level: 'warn', message: it.reason }], reason: '' }, known, titleOf)).join('')}</ul></section>`;
+    html += `<section class="term later"><header class="term-head"><h3>Not placed yet</h3></header><ul class="term-list">${shown.later.map((it) => planRow(it, known, titleOf)).join('')}</ul></section>`;
   }
-  const general = check.issues.filter((x) => !x.code && x.term == null);
-  const termWide = check.issues.filter((x) => !x.code && x.term != null);
+  const general = check.issues.filter((x) => !x.code && x.term == null && x.level === 'error');
+  const termWide = check.issues.filter((x) => !x.code && x.term != null && x.level === 'error');
   if (general.length || termWide.length) {
     html += `<ul class="plan-issues">${[...termWide, ...general].map((x) => `<li class="${x.level}">${esc(x.message)}</li>`).join('')}</ul>`;
   }

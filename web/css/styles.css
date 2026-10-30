@@ -1304,3 +1304,10 @@ details.left-card > summary::-webkit-details-marker { display: none; }
 details.left-card > summary .card-title::before { content: '▸ '; color: var(--muted); }
 details.left-card[open] > summary { margin-bottom: 12px; }
 details.left-card[open] > summary .card-title::before { content: '▾ '; }
+
+/* pick a section right next to the Add button */
+.sec-pop { position: absolute; z-index: 60; display: grid; min-width: 240px; max-width: min(420px, calc(100vw - 16px)); padding: 6px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card); box-shadow: 0 10px 30px rgba(20, 24, 40, .16); }
+.sec-pop button { text-align: left; font: inherit; font-size: 13px; padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--text); cursor: pointer; }
+.sec-pop button:hover, .sec-pop button:focus-visible { background: color-mix(in srgb, var(--focus) 10%, transparent); color: var(--ink); outline: none; }
+.add-btn.added:hover { background: var(--card); color: var(--danger); border-color: var(--danger); }
+.add-btn.added:hover::after { content: ' · remove'; }

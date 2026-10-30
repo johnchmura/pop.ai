@@ -215,17 +215,50 @@ function addCourseButton(code) {
   if (!n) return '';
   const added = course.sections.some((s) => state.saved.includes(s.crn));
   const label = added ? '✓ Added' : n === 1 ? 'Add' : `Add · ${n} sections`;
-  const tip = n === 1 ? `Add ${code} (CRN ${course.sections[0].crn}) to your schedule` : `Pick one of the ${n} ${code} sections to add`;
-  return `<button type="button" class="add-btn${added ? ' added' : ''}" data-add-course="${esc(code)}" title="${esc(tip)}" aria-label="${esc(tip)}">${label}</button>`;
+  const tip = added ? `Remove ${code} from your schedule` : n === 1 ? `Add ${code} (CRN ${course.sections[0].crn}) to your schedule` : `Pick one of the ${n} ${code} sections`;
+  return `<button type="button" class="add-btn${added ? ' added' : ''}" data-add-course="${esc(code)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${added}">${label}</button>`;
 }
-function addCourse(code) {
+
+/** One line for a section in the picker: "Lecture · MW 11:25 AM - 12:40 PM · 40 open". */
+function sectionLine(s) {
+  const when = s.meetings.map((m) => [m.days && m.days !== 'TBA' ? m.days : '', m.time && m.time !== 'TBA' ? m.time : ''].filter(Boolean).join(' ')).filter(Boolean).join(', ') || 'Time TBA';
+  const seats = s.available == null ? '' : s.available <= 0 ? ' · Full' : ` · ${s.available} open`;
+  const clash = sectionClashes(s, state.busy).length ? ' · clashes' : '';
+  return `${s.scheduleType || 'Section'}${s.bucket && s.bucket !== 'Class' ? ` (${s.bucket})` : ''} · ${when}${seats}${clash}`;
+}
+function closeSectionPicker() {
+  document.querySelector('.sec-pop')?.remove();
+}
+/** A small menu next to the button: pick one section, right where you are. */
+function openSectionPicker(btn, course) {
+  closeSectionPicker();
+  const pop = document.createElement('div');
+  pop.className = 'sec-pop';
+  pop.setAttribute('role', 'menu');
+  pop.innerHTML = course.sections.map((s) => `<button type="button" role="menuitem" data-pick-crn="${esc(s.crn)}">${esc(sectionLine(s))}</button>`).join('');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  pop.style.top = `${window.scrollY + r.bottom + 6}px`;
+  pop.style.left = `${Math.max(8, Math.min(window.scrollX + r.right - w, window.scrollX + document.documentElement.clientWidth - w - 8))}px`;
+  pop.querySelector('button')?.focus();
+}
+function addCourse(code, btn) {
   const course = state.index?.get(code);
   if (!course?.sections?.length) return;
+  // added: the same button removes it
+  const saved = course.sections.filter((s) => state.saved.includes(s.crn));
+  if (saved.length) {
+    state.saved = state.saved.filter((crn) => !saved.some((s) => s.crn === crn));
+    store.set('saved', state.saved);
+    renderAfterChange();
+    return;
+  }
   if (course.sections.length === 1) return toggleSaved(course.sections[0].crn);
-  // several sections: show them all so the student picks one
+  if (btn) return openSectionPicker(btn, course);
+  // no button to anchor to: show every section in search
   state.expanded.add(code);
   setQuery(code, { focusInput: false });
-  state.expanded.add(code);
   state.compactOpen.add(code);
   renderResults();
 }
@@ -662,12 +695,16 @@ function wire() {
   });
 
   // one click handler for result cards, graph detail, and the empty states
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSectionPicker(); });
+  window.addEventListener('resize', closeSectionPicker);
   document.addEventListener('click', (e) => {
     const t = e.target;
     const by = (attr) => t.closest(`[${attr}]`);
     let el;
     if ((el = by('data-add'))) return toggleSaved(el.dataset.add);
-    if ((el = by('data-add-course'))) return addCourse(el.dataset.addCourse);
+    if ((el = by('data-pick-crn'))) { closeSectionPicker(); if (!state.saved.includes(el.dataset.pickCrn)) toggleSaved(el.dataset.pickCrn); return undefined; }
+    if (!t.closest('.sec-pop')) closeSectionPicker();
+    if ((el = by('data-add-course'))) return addCourse(el.dataset.addCourse, el);
     if ((el = by('data-semantic'))) return semanticSearch(el.dataset.semantic);
     if ((el = by('data-complete'))) return toggleCompleted(el.dataset.complete);
     if ((el = by('data-graph'))) { state.graphSelected = el.dataset.graph; if (!state.focus.includes(el.dataset.graph)) setQuery(el.dataset.graph, { focusInput: false }); setTab('graph'); return; }
