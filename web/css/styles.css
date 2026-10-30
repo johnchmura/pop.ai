@@ -1338,3 +1338,13 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 .pr-suggest.all .sug.extra { display: inline-flex; }
 .pr-suggest .more-chips { font-weight: 700; color: var(--muted); cursor: pointer; }
 .pr-suggest > .small.muted { align-self: center; }
+
+/* plan rows: credits always in the same right-hand column; the Add button sits under them */
+.pr-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: baseline; }
+.pr-top .pr-name { grid-column: 1; grid-row: 1 / span 2; }
+.pr-top .pr-cr { grid-column: 2; grid-row: 1; justify-self: end; text-align: right; min-width: 3.2em; }
+.pr-top .add-btn { grid-column: 2; grid-row: 2; justify-self: end; margin-left: 0; align-self: start; }
+
+/* the search box lines up with the content below it (the card's padding sits outside the column) */
+.search-card { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; }
+@media (max-width: 960px) { .search-card { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; } }
