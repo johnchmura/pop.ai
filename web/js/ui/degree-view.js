@@ -11,7 +11,6 @@ import { normalizeCode } from '../core/prereq.js';
 import { esc } from './util.js';
 
 const MAX_FILE = 8 * 1024 * 1024;
-const STATUS_TEXT = { done: 'Done', 'in-progress': 'In progress', planned: 'Planned', remaining: 'Needed' };
 
 // ---------- reading files ----------
 
@@ -72,19 +71,6 @@ const KIND = {
   elective: { tag: 'CS elective', cls: 'k-elec' },
   placeholder: { tag: '', cls: 'k-open' },
 };
-
-function pill(status) {
-  return `<span class="req-pill ${status}">${STATUS_TEXT[status] || status}</span>`;
-}
-
-function courseChip(c, known) {
-  const cls = c.status === 'completed' ? 'done' : c.status === 'in-progress' ? 'ip' : 'pl';
-  const label = `${c.code}${c.grade ? ` · ${c.grade}` : c.status === 'in-progress' ? ' · now' : c.status === 'planned' ? ' · saved' : ''}`;
-  const tip = `${c.code}${c.title ? `: ${c.title}` : ''} — ${c.status === 'completed' ? 'completed' : c.status === 'in-progress' ? 'in progress' : 'planned (saved section)'}`;
-  return known(c.code)
-    ? `<button type="button" class="req-chip ${cls}" data-code="${esc(c.code)}" title="${esc(tip)}">${esc(label)}</button>`
-    : `<span class="req-chip ${cls}" title="${esc(tip)}">${esc(label)}</span>`;
-}
 
 function linkify(text, known) {
   return esc(text).replace(/\b([A-Z]{2,4}) (\d{3})\b/g, (m) => (known(m) ? `<button type="button" class="code-link" data-code="${m}">${m}</button>` : m));
@@ -189,8 +175,6 @@ export function renderDegree(el, ctx) {
     return null;
   }
   const tableWasOpen = !!el.querySelector('details.t-card[open]');
-  const reqsWereOpen = !!el.querySelector('details.all-reqs[open]');
-  const leftWasOpen = !!el.querySelector('details.left-card[open]');
   const best = bestAttempts(transcript.courses);
   const completed = new Set(best.filter((r) => r.status === 'completed').map((r) => r.code));
   const inProgress = new Set(best.filter((r) => r.status === 'in-progress').map((r) => r.code));
@@ -299,37 +283,6 @@ export function renderDegree(el, ctx) {
         <ul class="change-list">${transcript.changes.map((c) => `<li><span>${esc(describeChange(c))}</span><button type="button" class="link-btn" data-undo-change="${esc(c.id)}">Undo</button></li>`).join('')}</ul>
       </div>`;
   }
-
-  // ----- 3. what's left -----
-  const left = audit.groups.filter((g) => g.status === 'remaining');
-  // lets the student apply a course by hand, like an adviser exception in Degree Works
-  const applyOptions = best.filter((r) => r.status === 'completed' || r.status === 'in-progress')
-    .sort((a, b) => a.code.localeCompare(b.code))
-    .map((r) => `<option value="${esc(r.code)}">${esc(r.code)}${r.title ? ` ${esc(r.title)}` : ''}</option>`).join('');
-  const doneGroups = audit.groups.filter((g) => g.status !== 'remaining');
-  html += `<details class="card left-card"${leftWasOpen ? ' open' : ''}>
-      <summary class="card-head"><h2 class="card-title">What’s left</h2><span class="small muted">${left.length} group${left.length === 1 ? '' : 's'} · ${t.remaining} credits</span></summary>
-      ${left.length ? `<ul class="left-list">${left.map((g) => `<li>
-          <div class="left-head"><span class="left-name">${esc(g.name)}</span><span class="left-cr">${g.creditsLeft || '—'} cr left</span></div>
-          <ul>${g.remaining.map((r) => `<li>${linkify(r, known)}</li>`).join('')}</ul>
-        </li>`).join('')}</ul>` : '<p>Nothing left. 🎓</p>'}
-      ${doneGroups.length ? `<div class="done-row">${doneGroups.map((g) => `<span class="done-chip ${g.status}">${g.status === 'done' ? '✓' : '◐'} ${esc(g.name)}</span>`).join('')}</div>` : ''}
-      <details class="all-reqs"${reqsWereOpen ? ' open' : ''}><summary>All requirements</summary><ul class="req-list">`;
-  for (const g of audit.groups) {
-    const have = g.done + g.inProgress + g.planned;
-    html += `<li class="req">
-        <div class="req-head"><span class="req-name">${esc(g.name)}</span>${pill(g.status)}<span class="req-cr">${Math.min(have, g.credits)}/${g.credits} cr</span></div>
-        <div class="req-bar"><span class="p-done" style="width:${Math.min(100, (g.done / g.credits) * 100)}%"></span><span class="p-ip" style="width:${Math.min(100, (g.inProgress / g.credits) * 100)}%"></span><span class="p-pl" style="width:${Math.min(100, (g.planned / g.credits) * 100)}%"></span></div>
-        ${g.courses.length ? `<div class="req-chips">${g.courses.map((c) => courseChip(c, known)).join('')}</div>` : ''}
-        ${g.waived ? `<p class="req-note"><strong>Marked as met:</strong> ${esc(g.waived)}</p>` : ''}
-        ${g.note ? `<p class="req-note">${esc(g.note)}</p>` : ''}
-        ${g.status === 'remaining' && (g.type === 'all' || g.type === 'pick') && applyOptions ? `<label class="small muted apply-pick">Adviser counted a course here?
-            <select data-apply-group="${esc(g.name)}"><option value="">Pick the course…</option>${applyOptions}</select></label>` : ''}
-      </li>`;
-  }
-  html += '</ul>';
-  if (audit.extra.length) html += `<p class="small muted">Extra credit beyond the degree: ${audit.extra.map((e) => esc(e.code)).join(', ')}</p>`;
-  html += '</details></details>';
 
   // ----- 4. transcript courses (editable) -----
   const rows = transcript.courses.map((r, i) => `<tr class="${r.status === 'not-counted' || r.repeatExcluded ? 'muted-row' : ''}">
