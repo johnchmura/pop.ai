@@ -109,7 +109,7 @@ export function renderDetail({ index, code, completed, planned, els, addButton =
   if (completed.has(code)) status = '<span class="badge ok">Completed</span>';
   else if (completed.size) {
     const st = evaluate(course.prereq, { completed, current: planned });
-    if (st === 'met') status = '<span class="badge ok">Prerequisites met</span>';
+    if (st === 'met') status = '<span class="badge ok" title="You have every prerequisite">Eligible</span>';
     else if (st === 'unknown') status = `<span class="badge warn">Needs: ${esc(missingParts(course.prereq, { completed, current: planned }).join('; '))}</span>`;
     else status = `<span class="badge no">Missing: ${esc(missingParts(course.prereq, { completed, current: planned }).join('; '))}</span>`;
   }

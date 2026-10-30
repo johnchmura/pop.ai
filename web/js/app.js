@@ -125,7 +125,7 @@ function eligibilityBadge(course) {
   planned.delete(course.code);
   const st = { completed: done, current: planned, grades: gradeMap() };
   const result = evaluate(course.prereq, st);
-  if (result === 'met') return '<span class="badge ok">Prerequisites met</span>';
+  if (result === 'met') return '<span class="badge ok" title="You have every prerequisite">Eligible</span>';
   const missing = missingParts(course.prereq, st).join('; ');
   if (result === 'unknown') return `<span class="badge warn">Needs: ${esc(missing)}</span>`;
   return `<span class="badge no">Missing: ${esc(missing)}</span>`;
@@ -454,7 +454,7 @@ function appScreen() {
     f.levels.length ? `levels ${f.levels.map((l) => `${l}s`).join(', ')}` : '',
     f.days.length ? `meets only on ${f.days.join('')}` : '',
     f.open ? 'open seats only' : '',
-    f.eligible ? 'only courses the student can take now' : '',
+    f.eligible ? 'only courses the student is eligible for ("Eligible" filter)' : '',
   ].filter(Boolean);
   const stars = [];
   for (const t of lastDegree?.shown?.terms || []) {
