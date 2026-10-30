@@ -152,11 +152,14 @@ test('a minor is found from the courses and counted automatically (three ECON co
   const audit = auditDegree(ai, records, { index, planned: [] });
   const minor = audit.groups.find((g) => g.id === 'minor-requirement');
   assert.equal(minor.minorSubject, 'ECON');
-  assert.deepEqual(minor.courses.map((c) => c.code).sort(), ['ECON 211', 'ECON 251', 'ECON 311']);
-  assert.equal(minor.creditsLeft, 6);
-  // the same ECON courses still count in the Core Curriculum, and the credit total counts them once
+  // one rule: the minor shares at most ONE course with another requirement
   const hss = audit.groups.find((g) => g.type === 'hss');
-  assert.ok(hss.courses.some((c) => c.code.startsWith('ECON')));
+  const shared = minor.courses.filter((c) => hss.courses.some((h) => h.code === c.code));
+  assert.equal(shared.length, 1, `shared: ${shared.map((c) => c.code)}`);
+  assert.equal(minor.creditsLeft, 15 - minor.courses.reduce((n, c) => n + c.credits, 0));
+  // the shared course's credits are made up with a free elective
+  const makeup = audit.groups.find((g) => g.type === 'free');
+  assert.ok(makeup && makeup.credits === shared[0].credits && /also counts toward the minor/.test(makeup.note));
   const earned = records.filter((r) => r.status === 'completed').reduce((n, r) => n + r.credits, 0);
   assert.ok(audit.totals.done <= earned, `${audit.totals.done} <= ${earned}`);
   // the plan names the minor's subject; no 1-credit slots

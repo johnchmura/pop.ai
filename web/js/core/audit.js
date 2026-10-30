@@ -273,7 +273,29 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
     const g = groupForLabel(p.appliesTo, program) || (/^minor requirement$/i.test(p.appliesTo) ? program.groups.find((x) => /minor/i.test(x.name)) : null);
     if (g) { p.force = g.id; (forcedBy.get(g.id) || forcedBy.set(g.id, []).get(g.id)).push(p.code); }
   }
-  const groups = program.groups.map((group0) => {
+  // One rule for every program: a minor may share ONE course with another requirement (for example
+  // an ECON course that is also a social science course for an Economics minor). The credits of that
+  // shared course still have to be earned, so a free elective of the same size is added.
+  // Order: major and Core Curriculum groups first, then the minor, then free electives.
+  const late = (g) => (isOpenMinor(g) && !(forcedBy.get(g.id) || []).length ? 1 : g.type === 'free' ? 2 : 0);
+  const order = program.groups.map((g, i) => ({ g, i })).sort((a, b) => late(a.g) - late(b.g) || a.i - b.i);
+  let sharedCredits = 0; // credits of the course the minor shares, made up with a free elective
+  let sharedCode = '';
+  const results = new Map();
+  for (const { g: group0 } of order) {
+    if (group0.type === 'free' && sharedCredits && !program.groups.some((x) => x !== group0 && x.type === 'free' && results.has(x.id))) {
+      results.set(group0.id, evalGroup({ ...group0, credits: group0.credits + sharedCredits, note: `${group0.note ? `${group0.note} ` : ''}Includes ${sharedCredits} credits for ${sharedCode}, which also counts toward the minor.` }));
+    } else {
+      results.set(group0.id, evalGroup(group0));
+    }
+  }
+  const groups = program.groups.map((g) => results.get(g.id));
+  // no free elective group in this program: add one for the shared course's credits
+  if (sharedCredits && !program.groups.some((g) => g.type === 'free')) {
+    groups.push(evalGroup({ id: 'free-shared', name: 'Free Elective', type: 'free', credits: sharedCredits, note: `Makes up the credits of ${sharedCode}, which also counts toward the minor.` }));
+  }
+
+  function evalGroup(group0) {
     let result;
     const forced = forcedBy.get(group0.id) || [];
     let group = group0;
@@ -288,18 +310,26 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
     if (isOpenMinor(group) && !forced.length) {
       minorSubject = detectMinorSubject(program, pool);
       if (minorSubject) {
-        // counted here as well as where they already count; the credit total counts them once
-        // the minor reads these courses without taking them from other groups; the credit total
-        // counts a course once (see `double`, filled in after every group is audited)
+        // the minor's subject courses no other requirement uses, then at most ONE shared course
         const used = [];
         let total = 0;
-        for (const p of pool.filter((x) => subject(x.code) === minorSubject).sort(byStatus)) {
+        const mine = pool.filter((x) => subject(x.code) === minorSubject).sort(byStatus);
+        for (const p of mine.filter((x) => !x.used)) {
           if (total >= group.credits) break;
+          p.used = group.id;
           used.push(p);
           total += p.credits;
         }
+        const share = total < group.credits ? mine.find((x) => x.used && x.used !== group.id) : null;
+        double = { completed: 0, 'in-progress': 0, planned: 0 };
+        if (share) {
+          used.push(share);
+          total += share.credits;
+          double[share.status] += share.credits;
+          sharedCredits = share.credits;
+          sharedCode = share.code;
+        }
         result = { used };
-        double = { completed: 0, 'in-progress': 0, planned: 0, of: used };
       }
     }
     if (result) { /* the minor, above */ }
@@ -349,16 +379,10 @@ export function auditDegree(program, records, { index, planned = [], waivers = [
       parts: result.parts ? result.parts.map((p) => ({ id: p.id, label: p.label, need: p.need, have: p.have.map((h) => h.code), problem: p.problem || '' })) : null,
       minorSubject,
       double,
+      sharedCode: minorSubject && double && (double.completed || double['in-progress'] || double.planned) ? sharedCode : '',
     };
-  });
-
-  // minor courses that another group also counts: their credits are already in the total
-  for (const g of groups) {
-    if (!g.double?.of) continue;
-    for (const p of g.double.of) { if (p.used && p.used !== g.id) g.double[p.status] += p.credits; else p.used = g.id; }
-    delete g.double.of;
   }
-  // minor courses no other group used still count toward the credit total, once
+
   const applied = (status) => groups.reduce((s, g) => {
     const capped = Math.min(g.credits, g.done + (status !== 'completed' ? g.inProgress : 0) + (status === 'planned' ? g.planned : 0));
     // a course counted in two groups (the minor) adds its credits once

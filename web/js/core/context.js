@@ -256,7 +256,7 @@ export function degreeBlock(index, ctx, programs) {
     }
   }
   for (const g of audit.groups) {
-    const minor = g.minorSubject ? ` (minor in ${g.minorSubject}, found from the student's ${g.minorSubject} courses; courses that also count elsewhere are counted in both places, and in the credit total once)` : '';
+    const minor = g.minorSubject ? ` (minor in ${g.minorSubject}, found from the student's ${g.minorSubject} courses${g.sharedCode ? `; shares ${g.sharedCode} with another requirement, the one course a minor may share, so a free elective makes up its credits` : ''})` : '';
     lines.push(`- ${g.name}${minor}: ${g.status}, ${g.done + g.inProgress + g.planned}/${g.credits} credits${g.courses.length ? ` [${g.courses.map((c) => c.code).join(', ')}]` : ''}${g.remaining.length ? `. Still needed: ${g.remaining.join('; ')}` : ''}`);
   }
   if (plan.outliers?.length) {
