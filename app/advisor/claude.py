@@ -121,11 +121,13 @@ def _handle_event(raw: str) -> list[dict[str, Any]]:
 
 async def call_claude(
     *, api_key: str, base_url: str, model: str, max_tokens: int,
-    system: list[dict] | str, messages: list[dict], timeout: float = 120.0,
+    system: list[dict] | str, messages: list[dict], timeout: float = 120.0, temperature: float | None = None,
 ) -> tuple[str, str | None]:
     """One request, not streamed. Returns (text, stop_reason). Raises ClaudeError."""
     url = f"{base_url.rstrip('/')}/v1/messages"
     body = {"model": model, "max_tokens": max_tokens, "system": system, "messages": messages}
+    if temperature is not None:
+        body["temperature"] = temperature
     async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=15.0)) as client:
         res = await client.post(url, headers=_headers(api_key), json=body)
     if res.status_code != 200:

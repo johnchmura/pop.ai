@@ -276,6 +276,12 @@ class ApiTests(unittest.TestCase):
         sent = FakeClaude.requests[0]["body"]
         self.assertEqual(sent["max_tokens"], 8000)
         self.assertEqual(sent["system"][2]["text"], "STUDENT CONTEXT\nPLAN TASK")
+        self.assertEqual(sent["temperature"], 0)  # the same request gives the same plan
+        # an exact repeat reuses the answer: no second request upstream
+        n = len(FakeClaude.requests)
+        again = self.client.post("/api/plan", json={"studentContext": "STUDENT CONTEXT\nPLAN TASK", "userText": "Make my plan."})
+        self.assertEqual(again.json()["text"], r.json()["text"])
+        self.assertEqual(len(FakeClaude.requests), n)
         self.assertEqual(self.client.post("/api/plan", json={"nope": 1}).status_code, 400)
 
     def test_transcript(self):

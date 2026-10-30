@@ -8,7 +8,7 @@ import { planSemesters, planInputs, describePlan, repackPlan } from '../core/pla
 import { checkPlan } from '../core/plan-check.js';
 import { addSuggestions, slotifyChoices } from '../core/suggest.js';
 import { normalizeCode } from '../core/prereq.js';
-import { esc } from './util.js';
+import { esc, store } from './util.js';
 
 const MAX_FILE = 8 * 1024 * 1024;
 
@@ -97,6 +97,17 @@ function courseChips(it, known, titleOf) {
     return `<button type="button" class="code-link sug${why ? ' chat' : ''}${hidden ? ' extra' : ''}" data-code="${esc(c)}" title="${esc(`${title ? `${c}: ${title}` : c}${why ? ` · ${why}` : ''}`)}">${why ? `<span class="sug-star" aria-label="${esc(why)}">★</span>` : ''}${esc(c)}${title ? `<span class="sug-title"> ${esc(title)}</span>` : ''}</button>`;
   };
   return `<div class="pr-options pr-suggest">${it.code ? '<span class="small muted">or</span>' : ''}${list.map((c, i) => chip(c, i >= 3)).join('')}${list.length > 3 ? `<button type="button" class="sug more-chips" data-more-chips title="Show all ${list.length}">+${list.length - 3}</button>` : ''}</div>`;
+}
+
+async function digest(text) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    let h = 0;
+    for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0;
+    return `h${h}`;
+  }
 }
 
 /** One course row in a term card. */
@@ -418,10 +429,19 @@ export function wireDegree(els, hooks) {
       } else {
         body = { text: lastInput.text || '' };
       }
-      const res = await fetch('/api/transcript', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 503) throw new Error('Transcript reading is unavailable. Try again later.');
-      if (!res.ok) throw new Error(data.error || 'Could not read the transcript. Try again.');
+      // the same file always reads the same way: an exact repeat reuses the earlier reading
+      const request = JSON.stringify(body);
+      const key = await digest(request);
+      const cache = store.get('readCache', {}) || {};
+      let data = cache[key];
+      if (!data) {
+        const res = await fetch('/api/transcript', { method: 'POST', headers: { 'content-type': 'application/json' }, body: request });
+        data = await res.json().catch(() => ({}));
+        if (res.status === 503) throw new Error('Transcript reading is unavailable. Try again later.');
+        if (!res.ok) throw new Error(data.error || 'Could not read the transcript. Try again.');
+        const keys = Object.keys(cache).slice(-4);
+        store.set('readCache', Object.fromEntries([...keys.map((k) => [k, cache[k]]), [key, data]]));
+      }
       const courses = cleanRecords(data.courses);
       if (!courses.length) throw new Error('No courses found. Use the unofficial transcript PDF from Banner.');
       apply(courses, lastInput.file?.name || 'Pasted transcript', data.warnings || [], { headerText: lastInput.text || '', majors: data.majors || [] });

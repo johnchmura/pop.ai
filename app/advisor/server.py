@@ -17,11 +17,12 @@ This server:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
 import time
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -334,6 +335,26 @@ async def chat(request: Request):
 # ----- plan
 
 
+# Answers for repeated plan and transcript requests: the same input gets the same output.
+_answers: "OrderedDict[str, tuple[str, str | None]]" = OrderedDict()
+_ANSWERS_MAX = 300
+
+
+def _cache_key(*parts: str) -> str:
+    h = hashlib.sha256()
+    for p in parts:
+        h.update(str(p).encode("utf-8"))
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
+def _remember(key: str, value: tuple[str, str | None]) -> None:
+    _answers[key] = value
+    _answers.move_to_end(key)
+    while len(_answers) > _ANSWERS_MAX:
+        _answers.popitem(last=False)
+
+
 @app.post("/api/plan")
 async def plan(request: Request):
     if rate_limited(request):
@@ -347,10 +368,17 @@ async def plan(request: Request):
     if not config.api_key:
         return error(503, "No Claude API key is set on the server.", mode="offline")
     user_text = str(body.get("userText") or "Make my recommended plan now.")[:40_000]
+    # the same request gets the same plan (temperature 0, and a cache for exact repeats)
+    key = _cache_key("plan", config.model, instructions(), body["studentContext"], user_text)
     try:
-        text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
-                                       system=system_blocks(student_context(body["studentContext"])),
-                                       messages=[{"role": "user", "content": user_text}])
+        if key in _answers:
+            text, stop = _answers[key]
+        else:
+            text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
+                                           system=system_blocks(student_context(body["studentContext"])),
+                                           messages=[{"role": "user", "content": user_text}], temperature=0)
+            if stop != "max_tokens":
+                _remember(key, (text, stop))
     except ClaudeError as exc:
         return error(502, str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -401,9 +429,16 @@ async def transcript(request: Request):
         content.append({"type": "text", "text": f"List every course on this transcript as JSON.\n\n<transcript>\n{body['text'][:60000]}\n</transcript>"})
     else:
         return error(400, "Send a transcript file or text.")
+    # the same file always reads the same way (temperature 0, and a cache for exact repeats)
+    key = _cache_key("transcript", config.model, TRANSCRIPT_PROMPT, json.dumps(content, sort_keys=True))
     try:
-        text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
-                                       system=TRANSCRIPT_PROMPT, messages=[{"role": "user", "content": content}])
+        if key in _answers:
+            text, stop = _answers[key]
+        else:
+            text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
+                                           system=TRANSCRIPT_PROMPT, messages=[{"role": "user", "content": content}], temperature=0)
+            if stop != "max_tokens":
+                _remember(key, (text, stop))
     except ClaudeError as exc:
         return error(502, f"Claude could not read the transcript: {exc}")
     except Exception as exc:  # noqa: BLE001

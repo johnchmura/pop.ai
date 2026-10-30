@@ -95,7 +95,7 @@ export function createSettings({ button, menu, onChange }) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (theme === 'system') apply(); });
 
   // erase everything the app knows about the student (display settings stay); asks first
-  const STUDENT_KEYS = ['transcript', 'aiPlan', 'chat', 'chatArchive', 'prefs', 'busy', 'completed', 'saved', 'filters', 'graphFilter', 'tab'];
+  const STUDENT_KEYS = ['transcript', 'aiPlan', 'planCache', 'readCache', 'chat', 'chatArchive', 'prefs', 'busy', 'completed', 'saved', 'filters', 'graphFilter', 'tab'];
   function confirmErase() {
     let dlg = document.getElementById('erase-dialog');
     if (!dlg) {

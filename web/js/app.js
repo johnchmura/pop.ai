@@ -509,6 +509,16 @@ function renderDegreeTab() {
     plan: state.plan,
   });
 }
+async function sha256(text) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    let h = 0;
+    for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0;
+    return `h${h}`;
+  }
+}
 /** The plan on screen, short, for the chat advisor. */
 function shownPlanSummary() {
   const shown = lastDegree?.shown;
@@ -526,24 +536,34 @@ function setPlan(plan) {
  * Make the plan. Runs only when a transcript is uploaded (or uploaded again) and when the student
  * asks for a change in the chat. Until then, and if it fails, the plan follows the degree rules.
  */
-async function buildPlan() {
+/**
+ * The same transcript always gives the same plan: the request holds only stable facts (no screen
+ * state, no search), the chat is included only when the student asked for a change there, the
+ * server answers at temperature 0, and an exact repeat reuses the earlier answer.
+ */
+async function buildPlan({ fromChat = false } = {}) {
   if (state.plan.busy || !state.transcript || state.health?.mode !== 'claude') return;
   state.plan.busy = true;
   renderDegreeTab();
   try {
-    const ctx = readClientContext({ ...chatContext(), plan: [] }, state.index);
+    const ctx = readClientContext({ ...chatContext(), plan: [], screen: [], query: '', focus: [] }, state.index);
     if (!ctx.transcript.length) return;
     const terms = (state.index.forecast?.terms || []).map((t) => t.label);
-    const res = await fetch('/api/plan', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        studentContext: `${studentContextBlock(state.index, 'my degree plan', ctx, state.programs)}\n\n${planTask({ terms, maxCredits: ctx.maxCredits })}`,
-        userText: planUserText(chat.messages()),
-      }),
+    const request = JSON.stringify({
+      studentContext: `${studentContextBlock(state.index, 'my degree plan', ctx, state.programs)}\n\n${planTask({ terms, maxCredits: ctx.maxCredits })}`,
+      userText: planUserText(fromChat ? chat.messages() : []),
     });
-    const reply = await res.json().catch(() => ({}));
-    if (!res.ok) return;
+    const key = await sha256(request);
+    const cache = store.get('planCache', {}) || {};
+    let reply = cache[key];
+    if (!reply) {
+      const res = await fetch('/api/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: request });
+      reply = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      // keep the last few answers, so the same request gives the same plan even after the server restarts
+      const keys = Object.keys(cache).slice(-7);
+      store.set('planCache', Object.fromEntries([...keys.map((k) => [k, cache[k]]), [key, reply]]));
+    }
     const data = finishAdvisorPlan(reply, { index: state.index, programs: state.programs, ctx });
     if (data?.source === 'claude') setPlan({ ...data, maxCredits: ctx.maxCredits });
   } catch {
@@ -912,7 +932,7 @@ async function start() {
     // STUDENT CONTEXT is built here in the page; the server adds COURSE DATA from Pop's database
     getContext: (question) => studentContextBlock(state.index, question, readClientContext(chatContext(), state.index), state.programs),
     onCodeClick: (code) => setQuery(code),
-    onPlanRequest: () => buildPlan(), // the advisor marks replies that change the plan
+    onPlanRequest: () => buildPlan({ fromChat: true }), // the advisor marks replies that change the plan
     resolveProposals: (list) => {
       const t = state.transcript;
       if (!t) return list.map(() => ({ ok: false, label: 'Change', problem: 'Upload a transcript on the Degree tab first.' }));
@@ -942,7 +962,7 @@ async function start() {
     setTranscript,
     getPrograms: () => state.programs,
     onCode: (code) => setQuery(code),
-    onNewTranscript: () => { setPlan(null); buildPlan(); }, // a new upload makes a new plan
+    onNewTranscript: () => { $('.upload-card')?.classList.remove('replacing'); setPlan(null); renderDegreeTab(); buildPlan(); }, // a new upload makes a new plan (the same file, the same plan)
     onUndoChange: (change) => { chat.changeUndone(change.id, describeChange(change)); buildPlan(); },
     catalogTitles: new Map(idx.list.map((c) => [c.code, c.title])),
   });
