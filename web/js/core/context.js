@@ -164,7 +164,9 @@ export function readClientContext(raw, index) {
     planSource: ctx.planSource === 'claude' ? 'claude' : 'rules',
     savedCrns,
     busy: cleanCommitments(ctx.busy),
+    prefs: Array.isArray(ctx.prefs) ? ctx.prefs.filter((x) => typeof x === 'string').slice(-25).map((x) => x.slice(0, 160)) : [],
     focus: cleanCodes(ctx.focus, index, 10),
+    screen: Array.isArray(ctx.screen) ? ctx.screen.filter((x) => typeof x === 'string').slice(0, 20).map((x) => x.slice(0, 600)) : [],
   };
 }
 
@@ -274,6 +276,14 @@ export function degreeBlock(index, ctx, programs) {
 export function studentContextBlock(index, message, ctx, programs = []) {
   const lines = ['STUDENT CONTEXT (from the app, this request only)'];
   lines.push(`Search box: ${ctx.query ? JSON.stringify(ctx.query) : '(empty)'}`);
+  if (ctx.prefs?.length) {
+    lines.push('What the student told you before (saved notes; they stay when the chat is deleted, so use them):');
+    for (const p of ctx.prefs) lines.push(`- ${p}`);
+  }
+  if (ctx.screen?.length) {
+    lines.push('App screen and settings (what the student sees and has set right now):');
+    for (const l of ctx.screen) lines.push(`- ${l}`);
+  }
   lines.push(`Completed courses (entered by the student): ${(ctx.manualCompleted || ctx.completed).length ? (ctx.manualCompleted || ctx.completed).join(', ') : 'not entered'}`);
 
   const sched = scheduleFacts(index, ctx);

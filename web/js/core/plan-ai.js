@@ -18,6 +18,7 @@ Hard rules (the app checks these and flags any break):
 - Every prerequisite must be done in an earlier term. A prerequisite marked as "can be taken at the same time" may be in the same term. Courses in progress now count as done.
 - Do not repeat a course the student already passed or is taking now.
 - Keep each term at or under ${maxCredits} credits, unless the student asked for more.
+- Spread electives and IPRO: one or two per term (CS electives, Core Curriculum, IPRO, free electives), not all at the end. When that is not possible, keep them as even as you can.
 - Cover every remaining requirement in DEGREE PROGRESS. Put saved sections in their term.
 - For Core Curriculum, IPRO, science, communication, and free electives you may use a slot with "code": null and a "label" like "Humanities (H) course, 200+". Name a real course only when you know it from COURSE DATA or the degree requirements.
 - When a requirement lets the student choose from a list (for example the AI Depth Course), do NOT pick one course. Use a slot with "code": null, "label" set to the requirement name, and "options" listing every allowed course that is in COURSE DATA.

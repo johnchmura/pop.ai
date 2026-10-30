@@ -281,3 +281,44 @@ test('plan check: the rule-based plan passes, broken plans are caught', async ()
   assert.equal(groupForRequirement('Computer Science Electives', program), 'cs-electives');
   assert.equal(groupForRequirement('Free elective', program), 'free');
 });
+
+test('plan: electives and IPRO are spread over the terms, and the last term follows the credit limit', async () => {
+  const { planInputs, describePlan, repackPlan } = await import('../js/core/planner.js');
+  const best = bestAttempts(sample.courses);
+  const completed = new Set(best.filter((r) => r.status === 'completed').map((r) => r.code));
+  const inProgress = new Set(best.filter((r) => r.status === 'in-progress').map((r) => r.code));
+  const audit = auditDegree(program, sample.courses, { index });
+  const inputs = planInputs(index, { completed, inProgress, saved: [] });
+  const flex = (t) => t.items.filter((i) => i.kind === 'elective' || i.kind === 'placeholder').length;
+  const at = (max) => planSemesters(audit, program, index, { ...inputs, maxCredits: max });
+  const p15 = at(15);
+  const counts = p15.terms.map(flex);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 2, `electives per term: ${counts}`);
+  assert.ok(counts.every((n) => n >= 1), `every term has an elective: ${counts}`);
+  for (const t of p15.terms) assert.ok(t.credits <= 15, `${t.label} ${t.credits}`);
+  // a lower limit adds terms past the forecast: the last term moves later, nothing is left out
+  const p9 = at(9);
+  assert.equal(p9.later.length, 0);
+  assert.ok(p9.terms.length > p15.terms.length);
+  for (const t of p9.terms) assert.ok(t.credits <= 9, `${t.label} ${t.credits}`);
+  // the advisor's plan is re-spread the same way, keeping its courses
+  const view = describePlan(p15, audit);
+  const re = repackPlan(view, { index, program, done: inputs.done, maxCredits: 9, locked: inputs.locked });
+  const codes = (v) => v.terms.flatMap((t) => t.items).map((i) => i.code || i.label).sort();
+  assert.deepEqual(codes(re), codes(view));
+  assert.ok(re.terms.every((t) => t.credits <= 9));
+  assert.equal(re.graduation, re.terms[re.terms.length - 1].label);
+});
+
+test('advisor memory: saved notes outlast the chat, and the app screen is in the context', async () => {
+  const { applyPrefOps } = await import('../js/core/commitments.js');
+  let { prefs, notes } = applyPrefOps([], [{ op: 'note', text: 'Wants a lighter fall term' }, { op: 'note', text: 'Likes machine learning' }]);
+  assert.equal(prefs.length, 2);
+  assert.equal(notes.length, 2);
+  ({ prefs } = applyPrefOps(prefs, [{ op: 'forget', text: 'wants a lighter fall term' }]));
+  assert.deepEqual(prefs, ['Likes machine learning']);
+  const ctx = readClientContext({ prefs, screen: ['Open tab: Degree', 'Credits per term setting: 12'] }, index);
+  const block = studentContextBlock(index, 'hi', ctx, programs);
+  assert.match(block, /What the student told you before[\s\S]*Likes machine learning/);
+  assert.match(block, /App screen and settings[\s\S]*Credits per term setting: 12/);
+});

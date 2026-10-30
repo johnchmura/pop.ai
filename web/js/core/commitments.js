@@ -112,3 +112,24 @@ export function applyMemoryOps(list, ops) {
   }
   return { busy, notes };
 }
+
+/**
+ * Things the student told the advisor that should outlast the chat (preferences, goals, limits):
+ * {"op":"note","text":"Prefers morning classes"}, {"op":"forget","text":"Prefers morning classes"}.
+ * Returns { prefs, notes }.
+ */
+export function applyPrefOps(list, ops) {
+  let prefs = (Array.isArray(list) ? list : []).filter((x) => typeof x === 'string');
+  const notes = [];
+  for (const op of ops || []) {
+    const text = String(op?.text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    if (op?.op === 'note' && text) {
+      prefs = [...prefs.filter((p) => p.toLowerCase() !== text.toLowerCase()), text].slice(-25);
+      notes.push(text);
+    } else if (op?.op === 'forget' && text) {
+      const keep = prefs.filter((p) => p.toLowerCase() !== text.toLowerCase());
+      if (keep.length !== prefs.length) { prefs = keep; notes.push(`Forgot: ${text}`); }
+    }
+  }
+  return { prefs, notes };
+}

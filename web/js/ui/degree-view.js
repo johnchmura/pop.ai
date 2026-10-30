@@ -4,7 +4,7 @@ import { detectProgram } from '../core/detect.js';
 import { waiversOf, describeChange, undoChange } from '../core/changes.js';
 import { parseTranscriptText, linesFromPdfItems, gradeStatus, cleanRecords, bestAttempts, REPEATABLE } from '../core/transcript.js';
 import { auditDegree } from '../core/audit.js';
-import { planSemesters, planInputs, describePlan } from '../core/planner.js';
+import { planSemesters, planInputs, describePlan, repackPlan } from '../core/planner.js';
 import { checkPlan } from '../core/plan-check.js';
 import { addSuggestions } from '../core/suggest.js';
 import { normalizeCode } from '../core/prereq.js';
@@ -203,7 +203,11 @@ export function renderDegree(el, ctx) {
   // which plan to show: the advisor's (if made and chosen) or the app's
   const p = ctx.plan || {};
   const useAi = !!p.ai;
-  const shown = useAi ? addSuggestions(JSON.parse(JSON.stringify(p.ai)), suggestCtx) : ruleView;
+  // the credits-per-term setting re-spreads the advisor's plan at once (the last term moves as needed)
+  const aiView = useAi && (p.ai.maxCredits || 15) !== maxCredits
+    ? repackPlan(JSON.parse(JSON.stringify(p.ai)), { index, program, done: inputs.done, grades, maxCredits, locked: inputs.locked })
+    : useAi ? JSON.parse(JSON.stringify(p.ai)) : null;
+  const shown = useAi ? addSuggestions(aiView, suggestCtx) : ruleView;
   const check = checkPlan(shown, { index, program, records: transcript.courses, done: inputs.done, grades, maxCredits, waivers });
   const t = audit.totals;
   const pct = (n) => `${Math.max(0, Math.min(100, (n / t.required) * 100)).toFixed(1)}%`;

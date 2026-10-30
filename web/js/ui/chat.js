@@ -198,7 +198,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
   confirmBox.className = 'clear-confirm';
   confirmBox.hidden = true;
   confirmBox.setAttribute('role', 'alertdialog');
-  confirmBox.innerHTML = '<span>Delete the whole chat? This cannot be undone.</span><button type="button" class="btn danger" data-clear-yes>Delete</button><button type="button" class="btn" data-clear-no>Cancel</button>';
+  confirmBox.innerHTML = '<span>Delete the chat messages? Saved preferences and time commitments stay.</span><button type="button" class="btn danger" data-clear-yes>Delete</button><button type="button" class="btn" data-clear-no>Cancel</button>';
   els.clear.after(confirmBox);
   const closeConfirm = () => { confirmBox.hidden = true; els.clear.hidden = false; clearTimeout(confirmTimer); };
   els.clear.addEventListener('click', () => {
@@ -213,6 +213,9 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
     if (!e.target.closest('[data-clear-yes]')) return;
     closeConfirm();
     if (busy) controller?.abort();
+    // the advisor's memory (time commitments, saved notes) stays; what the student said still guides suggestions
+    const said = messages.filter((m) => m.role === 'user' && !m.error).map((m) => m.content.slice(0, 600));
+    store.set('chatArchive', [...(store.get('chatArchive', []) || []), ...said].slice(-30));
     messages = [];
     save();
     render();

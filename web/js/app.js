@@ -11,7 +11,7 @@ import { initSplitter } from './ui/splitter.js';
 import { createSettings } from './ui/settings.js';
 import { renderDegree, wireDegree } from './ui/degree-view.js';
 import { bestAttempts, cleanRecords } from './core/transcript.js';
-import { cleanCommitments, sectionClashes, applyMemoryOps } from './core/commitments.js';
+import { cleanCommitments, sectionClashes, applyMemoryOps, applyPrefOps } from './core/commitments.js';
 import { resolveProposal, applyChange, changesForServer, describeChange } from './core/changes.js';
 import { studentContextBlock, readClientContext } from './core/context.js';
 import { chatInterests, programInterests, interestScore } from './core/interests.js';
@@ -44,6 +44,8 @@ const state = {
   filters: { ...DEFAULT_FILTERS, ...store.get('filters', {}) },
   saved: store.get('saved', []),
   busy: cleanCommitments(store.get('busy', [])),
+  // what the student told the advisor that outlasts the chat (preferences, goals); kept when the chat is deleted
+  prefs: (store.get('prefs', []) || []).filter((x) => typeof x === 'string').slice(-25),
   completed: store.get('completed', []),
   tab: store.get('tab', 'degree'),
   graphSelected: null,
@@ -419,6 +421,7 @@ function chatContext() {
     query: state.query,
     savedCrns: state.saved,
     busy: state.busy,
+    prefs: state.prefs,
     completed: state.completed,
     transcript: state.transcript?.courses || [],
     changes: changesForServer(state.transcript),
@@ -427,7 +430,52 @@ function chatContext() {
     plan: shownPlanSummary(),
     planSource: lastDegree?.source || 'rules',
     focus: state.focus.length ? state.focus : state.results.slice(0, 3).map((r) => r.course.code),
+    screen: appScreen(),
   };
+}
+
+/** What the student said: the chat, earlier (deleted) chats, and saved notes. Used for stars. */
+function studentWords() {
+  return [
+    ...(store.get('chatArchive', []) || []).map((content) => ({ role: 'user', content: String(content) })),
+    ...state.prefs.map((content) => ({ role: 'user', content })),
+    ...(store.get('chat', []) || []),
+  ];
+}
+
+/** Everything else the student can see or set in the app, as short lines for the advisor. */
+function appScreen() {
+  const f = state.filters;
+  const program = state.programs.find((p) => p.id === state.transcript?.programId);
+  const d = state.transcript?.detected;
+  const tabNames = { chat: 'Advisor', schedule: 'Schedule', degree: 'Degree', graph: 'Prerequisite Graph' };
+  const filters = [
+    f.subjects.length ? `department ${f.subjects.join(', ')}` : '',
+    f.levels.length ? `levels ${f.levels.map((l) => `${l}s`).join(', ')}` : '',
+    f.days.length ? `meets only on ${f.days.join('')}` : '',
+    f.open ? 'open seats only' : '',
+    f.eligible ? 'only courses the student can take now' : '',
+  ].filter(Boolean);
+  const stars = [];
+  for (const t of lastDegree?.shown?.terms || []) {
+    for (const it of t.items) {
+      for (const c of it.chatMatches || []) stars.push(`${c} (${t.label}, matches what the student said)`);
+      for (const c of it.majorMatches || []) stars.push(`${c} (${t.label}, related to the major)`);
+    }
+  }
+  const graph = state.tab === 'graph' ? graphFocus() : [];
+  return [
+    `Open tab: ${tabNames[state.tab] || state.tab}`,
+    `Schedule semester: ${state.index.semester} (search lists only courses with ${state.index.semester} sections)`,
+    `Search results: ${state.query.trim() ? `${state.results.length} (${state.results.slice(0, 8).map((r) => r.course.code).join(', ')}${state.results.length > 8 ? ', ...' : ''})` : 'none (search box empty)'}`,
+    `Search filters: ${filters.length ? filters.join('; ') : 'none'}`,
+    `Degree program: ${program ? `${program.name}${state.transcript.chosenByUser ? ' (chosen by the student)' : d ? ` (found on the transcript, ${d.confidence} confidence)` : ''}` : 'not set (no transcript)'}`,
+    `Credits per term setting: ${state.transcript?.maxCredits || 15}`,
+    `Plan on the Degree tab: ${state.plan.busy ? 'being updated now' : lastDegree?.shown ? `finishes ${lastDegree.shown.graduation || 'after the planned terms'}` : 'none'}`,
+    `Starred suggestions on the Degree tab: ${stars.length ? stars.slice(0, 12).join('; ') : 'none'}`,
+    `Prerequisite graph: ${state.tab === 'graph' ? `showing ${graph.join(', ') || 'nothing (no search)'}; "show what each course unlocks" ${state.options.showDependents ? 'on' : 'off'}` : 'not open'}`,
+    `Display: ${store.get('theme', 'system')} mode, ${store.get('colorTheme', 'Default')} color theme`,
+  ];
 }
 
 // ---------- degree ----------
@@ -457,7 +505,7 @@ function renderDegreeTab() {
     savedCourses: plannedCourses(),
     known,
     addButton: addCourseButton,
-    interests: chatInterests(store.get('chat', [])), // suggested courses follow what the chat discussed
+    interests: chatInterests(studentWords()), // suggested courses follow what the student said, even after the chat is deleted
     plan: state.plan,
   });
 }
@@ -497,7 +545,7 @@ async function buildPlan() {
     const reply = await res.json().catch(() => ({}));
     if (!res.ok) return;
     const data = finishAdvisorPlan(reply, { index: state.index, programs: state.programs, ctx });
-    if (data?.source === 'claude') setPlan(data);
+    if (data?.source === 'claude') setPlan({ ...data, maxCredits: ctx.maxCredits });
   } catch {
     // keep the plan on screen
   } finally {
@@ -509,12 +557,14 @@ async function buildPlan() {
 // ---------- time commitments (kept by the chat advisor) ----------
 function applyMemory(ops) {
   const { busy, notes } = applyMemoryOps(state.busy, ops);
-  if (!notes.length) return [];
+  const p = applyPrefOps(state.prefs, ops);
+  if (p.notes.length) { state.prefs = p.prefs; store.set('prefs', state.prefs); renderDegreeTab(); }
+  if (!notes.length) return p.notes;
   state.busy = busy;
   store.set('busy', state.busy);
   renderResults();
   renderScheduleTab();
-  return notes;
+  return [...notes, ...p.notes];
 }
 
 // ---------- tabs ----------

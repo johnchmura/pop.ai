@@ -165,34 +165,42 @@ function chainHeights(items, index) {
   return new Map([...codes].map((c) => [c, h(c)]));
 }
 
+// electives and IPRO: spread over the terms (one or two a term) instead of piling up at the end
+const FLEX = new Set(['elective', 'placeholder']);
+const isFlex = (it) => FLEX.has(it.kind);
+const MAX_TERMS = 12; // stop extending the plan after this many terms
+
+/** The term after `term` (fall and spring only): Spring 2028 -> Fall 2028 -> Spring 2029. */
+export function nextTerm(term) {
+  const spring = /^S\d/.test(term.key) && !/^SU/.test(term.key);
+  const year = Number(term.label.split(' ')[1]);
+  return spring ? { key: `F${String(year).slice(2)}`, label: `Fall ${year}` } : { key: `S${String(year + 1).slice(2)}`, label: `Spring ${year + 1}` };
+}
+
 /**
- * Build a plan.
- *   audit, program, index: from auditDegree / data files
- *   done:   Set of codes finished before the first planned term (completed + in progress + saved)
- *   grades: Map code -> grade (for minimum-grade rules)
- *   maxCredits: per term (default 15)
- *   locked: { termKey: [codes] } courses already chosen for a term (the saved sections for the
- *           schedule term). They go in that term first and count toward its credits.
- * Returns { terms: [{ key, label, items, credits }], later: [items with reasons], items }.
+ * Is a course offered in a term? Terms on the forecast use it. Later terms (past the forecast)
+ * use the last forecast term of the same season.
  */
-export function planSemesters(audit, program, index, { done = new Set(), grades = new Map(), maxCredits = 15, terms, locked = {} } = {}) {
+function offeredAt(forecast, code, term) {
+  if (!forecast?.terms?.length || forecast.terms.some((t) => t.key === term.key)) return offeredIn(forecast, code, term.key);
+  const season = term.key.replace(/\d+$/, '');
+  const same = forecast.terms.filter((t) => t.key.replace(/\d+$/, '') === season).pop();
+  return same ? offeredIn(forecast, code, same.key) : null;
+}
+
+/**
+ * Put pending items into terms. Each item: { code, credits, kind, priority, ... }.
+ * The plan grows past the given terms (up to MAX_TERMS) until everything fits, so the last
+ * term moves when the credit limit changes.
+ */
+function placeItems(pending, { index, program, termList, extend, done, grades, maxCredits, locked }) {
   const forecast = index.forecast;
-  const termList = terms || forecast?.terms || [];
-  const items = neededItems(audit, program, index, { exclude: done });
-  const heights = chainHeights(items, index);
-  const priority = (it) => {
-    const base = { required: 100, choice: 70, elective: 50, placeholder: 30 }[it.kind] || 0;
-    const height = it.code ? (heights.get(it.code) || 1) : 0;
-    // spread placeholders: IPRO and Core Curriculum courses a bit ahead of free electives
-    const ph = it.kind === 'placeholder' ? ({ ipro: 6, hss: 5, 'science-elective': 4, 'comm-elective': 4, 'cs-electives': 3, free: 0 }[it.group] || 2) : 0;
-    return base + height * 12 + ph;
-  };
-
   const finished = new Set(done);
-  const pending = items.map((it, i) => ({ ...it, id: i, priority: priority(it) }));
   const plan = [];
-
-  for (const term of termList) {
+  const terms = termList.slice();
+  const unplaced = () => pending.filter((p) => !p.placed);
+  for (let ti = 0; ti < terms.length; ti++) {
+    const term = terms[ti];
     const chosen = [];
     let credits = 0;
     const thisTerm = new Set();
@@ -209,65 +217,120 @@ export function planSemesters(audit, program, index, { done = new Set(), grades 
       thisTerm.add(code);
       for (const p of pending) if (p.code === code) p.placed = term.key;
     }
-    let placedSomething = true;
-    // loop so that a course can join a term after its same-term corequisite is placed
-    while (placedSomething) {
-      placedSomething = false;
-      const ready = pending
-        .filter((it) => !it.placed)
-        .filter((it) => {
-          if (!it.code) return true;
-          const offered = offeredIn(forecast, it.code, term.key);
-          if (offered === false) return false;
-          if (offered === null && (subject(it.code) === 'CS' || subject(it.code) === 'CSP') && forecast) return false;
-          const course = index.get(it.code);
-          if (!course) return true; // e.g. PHYS 123: no prerequisite data in this app
-          return evaluate(course.prereq, { completed: finished, current: thisTerm, grades, textRules: 'plan' }) === 'met';
-        })
-        .sort((a, b) => b.priority - a.priority || (a.code || '~').localeCompare(b.code || '~'));
-      // keep about one course of room for Core Curriculum and other placeholder courses each term
-      const placeholdersLeft = pending.some((p) => !p.placed && !p.code);
-      const realCap = placeholdersLeft ? maxCredits - 3 : maxCredits;
-      for (const it of ready) {
-        if (credits + it.credits > (it.code ? realCap : maxCredits)) continue;
-        // keep placeholders from crowding out: at most 2 per term while real courses remain
-        if (it.kind === 'placeholder' && chosen.filter((c) => c.kind === 'placeholder').length >= 2
-          && pending.some((p) => !p.placed && p.code)) continue;
-        it.placed = term.key;
-        chosen.push(it);
-        credits += it.credits;
-        if (it.code) thisTerm.add(it.code);
-        placedSomething = true;
-        break; // re-check readiness (same-term corequisites)
-      }
-    }
-    // fill leftover room with placeholders even if real courses remain (they may be blocked)
-    for (const it of pending.filter((p) => !p.placed && !p.code).sort((a, b) => b.priority - a.priority)) {
-      if (credits + it.credits > maxCredits) continue;
+    const ready = (it) => {
+      if (it.placed) return false;
+      if (!it.code) return true;
+      const offered = offeredAt(forecast, it.code, term);
+      if (offered === false) return false;
+      if (offered === null && (subject(it.code) === 'CS' || subject(it.code) === 'CSP') && forecast) return false;
+      const course = index.get(it.code);
+      if (!course) return true; // e.g. PHYS 123: no prerequisite data in this app
+      return evaluate(course.prereq, { completed: finished, current: thisTerm, grades, textRules: 'plan' }) === 'met';
+    };
+    // how many electives / IPRO this term: an even share of what is left (at least one when any is left)
+    const left = unplaced();
+    const flexLeft = left.filter(isFlex).length;
+    const creditsLeft = left.reduce((n, p) => n + p.credits, 0);
+    const termsLeft = Math.max(1, Math.ceil(creditsLeft / Math.max(1, maxCredits)));
+    const quota = flexLeft ? Math.max(1, Math.ceil(flexLeft / termsLeft)) : 0;
+    const flexIn = () => chosen.filter(isFlex).length;
+    const place = (it) => {
       it.placed = term.key;
       chosen.push(it);
       credits += it.credits;
+      if (it.code) thisTerm.add(it.code);
+    };
+    // pass 1: required courses up to the room left after this term's electives; electives up to the quota
+    // pass 2: fill what is still free with anything that is ready
+    for (const pass of [1, 2]) {
+      let placedSomething = true;
+      while (placedSomething) {
+        placedSomething = false;
+        // mix the kinds of electives in a term: one CS elective, one IPRO, one Core course, not three of a kind
+        const same = (it) => (isFlex(it) ? chosen.filter((c) => isFlex(c) && c.group === it.group).length * 40 : 0);
+        const list = pending.filter(ready).sort((a, b) => (b.priority - same(b)) - (a.priority - same(a)) || (a.code || '~').localeCompare(b.code || '~'));
+        for (const it of list) {
+          if (credits + it.credits > maxCredits) continue;
+          if (pass === 1) {
+            if (isFlex(it) && flexIn() >= quota) continue;
+            const room = maxCredits - 3 * Math.max(0, quota - flexIn());
+            if (!isFlex(it) && credits + it.credits > room) continue;
+          }
+          place(it);
+          placedSomething = true;
+          break; // re-check readiness (same-term corequisites)
+        }
+      }
     }
     for (const code of thisTerm) finished.add(code);
     plan.push({ key: term.key, label: term.label, items: chosen, credits });
+    // more terms while something is left that can still be placed
+    if (ti === terms.length - 1 && extend && unplaced().length && terms.length < MAX_TERMS && chosen.length) terms.push(nextTerm(term));
   }
+  // empty terms at the end (finished early) are dropped
+  while (plan.length && !plan[plan.length - 1].items.length) plan.pop();
+  return { plan, finished };
+}
 
-  const later = pending.filter((it) => !it.placed).map((it) => {
-    let reason = 'No room in the plan; add another term or raise the credit limit.';
-    if (it.code) {
-      const offeredAny = forecast?.courses?.[it.code];
-      if (offeredAny && offeredAny.length === 0) reason = 'Not on the department forecast for these terms.';
-      else if (!offeredAny && (subject(it.code) === 'CS' || subject(it.code) === 'CSP')) reason = 'Not on the department forecast.';
-      else {
-        const course = index.get(it.code);
-        if (course && evaluate(course.prereq, { completed: finished, grades, textRules: 'plan' }) !== 'met') reason = 'Prerequisites are not done by the last planned term.';
-      }
+/** Why a course could not be placed. */
+function laterReason(it, index, finished, grades) {
+  const forecast = index.forecast;
+  let reason = 'No room in the plan; raise the credit limit.';
+  if (it.code) {
+    const offeredAny = forecast?.courses?.[it.code];
+    if (offeredAny && offeredAny.length === 0) reason = 'Not on the department forecast for these terms.';
+    else if (!offeredAny && (subject(it.code) === 'CS' || subject(it.code) === 'CSP')) reason = 'Not on the department forecast.';
+    else {
+      const course = index.get(it.code);
+      if (course && evaluate(course.prereq, { completed: finished, grades, textRules: 'plan' }) !== 'met') reason = 'Prerequisites are not done by the last planned term.';
     }
-    return { ...it, reason };
-  });
+  }
+  return reason;
+}
 
+/**
+ * Build a plan.
+ *   audit, program, index: from auditDegree / data files
+ *   done:   Set of codes finished before the first planned term (completed + in progress + saved)
+ *   grades: Map code -> grade (for minimum-grade rules)
+ *   maxCredits: per term (default 15)
+ *   terms:  terms to use (default: the forecast terms, then more terms until everything fits)
+ *   locked: { termKey: [codes] } courses already chosen for a term (the saved sections for the
+ *           schedule term). They go in that term first and count toward its credits.
+ * Returns { terms: [{ key, label, items, credits }], later: [items with reasons], items }.
+ */
+export function planSemesters(audit, program, index, { done = new Set(), grades = new Map(), maxCredits = 15, terms, locked = {} } = {}) {
+  const termList = terms || index.forecast?.terms || [];
+  const items = neededItems(audit, program, index, { exclude: done });
+  const heights = chainHeights(items, index);
+  const priority = (it) => {
+    const base = { required: 100, choice: 70, elective: 50, placeholder: 30 }[it.kind] || 0;
+    const height = it.code ? (heights.get(it.code) || 1) : 0;
+    // spread placeholders: IPRO and Core Curriculum courses a bit ahead of free electives
+    const ph = it.kind === 'placeholder' ? ({ ipro: 6, hss: 5, 'science-elective': 4, 'comm-elective': 4, 'cs-electives': 3, free: 0 }[it.group] || 2) : 0;
+    return base + height * 12 + ph;
+  };
+  const pending = items.map((it, i) => ({ ...it, id: i, priority: priority(it) }));
+  const { plan, finished } = placeItems(pending, { index, program, termList, extend: !terms, done, grades, maxCredits, locked });
+  const later = pending.filter((it) => !it.placed).map((it) => ({ ...it, reason: laterReason(it, index, finished, grades) }));
   addReasons(plan, pending, index);
   return { terms: plan, later, items: pending };
+}
+
+/**
+ * Re-spread an existing plan (the advisor's) over terms for a new credit limit, keeping its courses
+ * and their order. Saved sections stay in their term. Returns a plan view (describePlan shape).
+ */
+export function repackPlan(view, { index, program, done = new Set(), grades = new Map(), maxCredits = 15, locked = {} }) {
+  const flat = [...(view.terms || []).flatMap((t) => t.items), ...(view.later || [])].filter((it) => it.kind !== 'saved');
+  const pending = flat.map((it, i) => ({ ...it, credits: Number(it.credits) || 3, priority: 1000 - i, placed: undefined }));
+  const termList = index.forecast?.terms?.length ? index.forecast.terms : (view.terms || []).map((t) => ({ key: t.key, label: t.label }));
+  const { plan, finished } = placeItems(pending, { index, program, termList, extend: true, done, grades, maxCredits, locked });
+  const strip = ({ placed, priority, id, ...rest }) => rest;
+  const terms = plan.map((t) => ({ key: t.key, label: t.label, credits: t.credits, items: t.items.map((it) => (it.kind === 'saved' ? { code: it.code, label: '', title: it.title || '', credits: it.credits, kind: 'saved', requirement: 'Saved section', reason: '', warning: it.warning || '', options: [] } : strip(it))) }));
+  const later = pending.filter((it) => !it.placed).map((it) => ({ ...strip(it), reason: laterReason(it, index, finished, grades) }));
+  const used = terms.filter((t) => t.items.length);
+  return { ...view, terms, later, graduation: !later.length && used.length ? used[used.length - 1].label : '' };
 }
 
 /** Short "why" text for each placed course, in plain words. */
