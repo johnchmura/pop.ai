@@ -27,6 +27,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
 
   function bubble(m, i) {
     if (m.role === 'user') return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
+    if (m.note) return `<div class="msg note" role="status"><span class="chk-ic" aria-hidden="true">✓</span>${esc(m.content)}</div>`;
     const { text, proposals } = parseProposals(parseMemory(m.content.replace(PLAN_MARKS, ' ')).text);
     const body = m.pending && !text
       ? '<span class="typing" aria-label="Thinking"><i></i><i></i><i></i></span>'
@@ -44,6 +45,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
     const list = items.map((x) => `<li class="${x.ok ? '' : 'bad'}">${esc(x.label)}${x.why ? ` <span class="muted">· ${esc(x.why)}</span>` : ''}${x.ok ? '' : ` <span class="prob">${esc(x.problem)}</span>`}</li>`).join('');
     const action = m.applied
       ? '<p class="small">✓ Applied. <button type="button" class="link-btn" data-open-degree>See it on the Degree tab</button></p>'
+      : m.undone && good.length ? `<p class="small">Undone on the Degree tab. <button type="button" class="link-btn" data-apply-proposals="${i}">Apply again</button></p>`
       : good.length ? `<button type="button" class="btn primary" data-apply-proposals="${i}">Apply ${good.length} change${good.length === 1 ? '' : 's'} to my degree plan</button>` : '';
     return `<div class="proposal"><h4>Changes to your degree plan</h4><ul>${list}</ul>${action}<p class="small muted">Nothing changes until you press Apply. You can undo each change on the Degree tab.</p></div>`;
   }
@@ -78,7 +80,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
 
     controller = new AbortController();
     try {
-      const history = messages.filter((m) => m !== reply && !m.error).map(({ role, content }) => ({ role, content }));
+      const history = messages.filter((m) => m !== reply && !m.error && !m.note).map(({ role, content }) => ({ role, content }));
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -168,8 +170,9 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       const m = messages[Number(apply.dataset.applyProposals)];
       if (m && !m.applied && applyProposals) {
         const items = resolveProposals(parseProposals(m.content).proposals);
-        applyProposals(items.filter((x) => x.ok).map((x) => x.change));
+        m.appliedIds = applyProposals(items.filter((x) => x.ok).map((x) => x.change)) || [];
         m.applied = true;
+        m.undone = false;
         save();
         render();
       }
@@ -189,20 +192,51 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       }
     }
   });
+  // clearing the chat cannot be undone, so it asks first, right next to the button
+  let confirmTimer = 0;
+  const confirmBox = document.createElement('div');
+  confirmBox.className = 'clear-confirm';
+  confirmBox.hidden = true;
+  confirmBox.setAttribute('role', 'alertdialog');
+  confirmBox.innerHTML = '<span>Delete the whole chat? This cannot be undone.</span><button type="button" class="btn danger" data-clear-yes>Delete</button><button type="button" class="btn" data-clear-no>Cancel</button>';
+  els.clear.after(confirmBox);
+  const closeConfirm = () => { confirmBox.hidden = true; els.clear.hidden = false; clearTimeout(confirmTimer); };
   els.clear.addEventListener('click', () => {
+    if (!messages.length) return;
+    els.clear.hidden = true;
+    confirmBox.hidden = false;
+    confirmBox.querySelector('[data-clear-no]').focus();
+    confirmTimer = setTimeout(closeConfirm, 8000);
+  });
+  confirmBox.addEventListener('click', (e) => {
+    if (e.target.closest('[data-clear-no]')) { closeConfirm(); els.clear.focus(); return; }
+    if (!e.target.closest('[data-clear-yes]')) return;
+    closeConfirm();
     if (busy) controller?.abort();
     messages = [];
     save();
     render();
     els.input.focus();
   });
+  confirmBox.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeConfirm(); els.clear.focus(); } });
 
   render();
   return {
     ask,
     render,
     /** The conversation so far (no error bubbles), for the plan builder. */
-    messages: () => messages.filter((m) => !m.error && !m.pending && m.content).map(({ role, content }) => ({ role, content })),
+    messages: () => messages.filter((m) => !m.error && !m.pending && !m.note && m.content).map(({ role, content }) => ({ role, content })),
+    /** A change was undone on the Degree tab: say so in the chat, and let its card offer "Apply again". */
+    changeUndone(id, text) {
+      for (const m of messages) {
+        if (!m.appliedIds?.includes(id)) continue;
+        m.appliedIds = m.appliedIds.filter((x) => x !== id);
+        if (!m.appliedIds.length) { m.applied = false; m.undone = true; }
+      }
+      messages.push({ role: 'assistant', note: true, content: `Undid “${text}”` });
+      save();
+      render();
+    },
     get busy() { return busy; },
   };
 }

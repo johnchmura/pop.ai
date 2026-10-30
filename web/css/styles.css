@@ -1323,3 +1323,12 @@ details.left-card[open] > summary .card-title::before { content: '▾ '; }
 .lg-taken { display: inline-grid; place-items: center; width: 28px; height: 14px; border-radius: 7px; background: var(--ok-bg); border: 1px solid var(--ok); }
 .lg-taken .chk-ic { width: 10px; height: 10px; font-size: 7px; margin: 0; vertical-align: 0; }
 .lg-taken svg { width: 11px; height: 11px; fill: none; stroke: var(--ok); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* chat: status lines from the app ("Undone: ...") */
+.msg.note { justify-content: center; align-items: center; gap: 0; margin: 6px 0; font-size: 12.5px; color: var(--muted); }
+/* chat: clearing asks first */
+.clear-confirm { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.clear-confirm[hidden] { display: none; }
+.clear-confirm .btn { padding: 5px 12px; font-size: 12px; }
+.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.danger:hover { filter: brightness(1.08); }

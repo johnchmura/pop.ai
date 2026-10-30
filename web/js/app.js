@@ -12,7 +12,7 @@ import { createSettings } from './ui/settings.js';
 import { renderDegree, wireDegree } from './ui/degree-view.js';
 import { bestAttempts, cleanRecords } from './core/transcript.js';
 import { cleanCommitments, sectionClashes, applyMemoryOps } from './core/commitments.js';
-import { resolveProposal, applyChange, changesForServer } from './core/changes.js';
+import { resolveProposal, applyChange, changesForServer, describeChange } from './core/changes.js';
 import { studentContextBlock, readClientContext } from './core/context.js';
 import { chatInterests, programInterests, interestScore } from './core/interests.js';
 import { planTask, planUserText, finishAdvisorPlan } from './core/plan-ai.js';
@@ -875,6 +875,7 @@ async function start() {
       for (const c of changes) t = applyChange(t, c);
       setTranscript(t);
       buildPlan(); // a change made in the chat updates the plan
+      return (t.changes || []).slice(-changes.length).map((c) => c.id);
     },
     onMemory: applyMemory,
     openDegree: () => setTab('degree'),
@@ -892,6 +893,7 @@ async function start() {
     getPrograms: () => state.programs,
     onCode: (code) => setQuery(code),
     onNewTranscript: () => { setPlan(null); buildPlan(); }, // a new upload makes a new plan
+    onUndoChange: (change) => { chat.changeUndone(change.id, describeChange(change)); buildPlan(); },
     catalogTitles: new Map(idx.list.map((c) => [c.code, c.title])),
   });
   $('#replace-transcript').addEventListener('click', () => {

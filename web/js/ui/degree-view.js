@@ -468,7 +468,12 @@ export function wireDegree(els, hooks) {
   els.body.addEventListener('click', (e) => {
     const t = hooks.getTranscript();
     const undo = e.target.closest('[data-undo-change]');
-    if (undo && t) { hooks.setTranscript(undoChange(t, undo.dataset.undoChange)); return; }
+    if (undo && t) {
+      const change = (t.changes || []).find((c) => c.id === undo.dataset.undoChange);
+      hooks.setTranscript(undoChange(t, undo.dataset.undoChange));
+      if (change) hooks.onUndoChange?.(change); // the chat says so
+      return;
+    }
     const setProg = e.target.closest('[data-set-program]');
     if (setProg && t) { hooks.setTranscript({ ...t, programId: setProg.dataset.setProgram, chosenByUser: true, detected: undefined }); hooks.onNewTranscript?.(); return; }
     const del = e.target.closest('[data-del]');
