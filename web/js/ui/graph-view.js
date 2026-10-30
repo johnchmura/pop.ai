@@ -20,7 +20,7 @@ export function renderGraph({ index, focus, options, completed, planned, els, se
   if (!graph.focus.length) {
     els.focus.innerHTML = '';
     els.scroll.innerHTML = `<div class="graph-empty">
-        <p>Search for a course to see its prerequisites and what it unlocks.</p>
+        <p>Search a course to view its prerequisites.</p>
         <div class="seg">${(suggestions.length ? suggestions : ['CS 331', 'MATH 251', 'CS 480', 'CS 115', 'MATH 151'].filter((c) => index.get(c)?.sections?.length).slice(0, 3)).map((c) => `<button type="button" data-search="${esc(c)}" title="${esc(index.get(c)?.title || '')}">${esc(c)}</button>`).join('')}</div>
       </div>`;
     els.detail.hidden = true;
@@ -101,7 +101,7 @@ export function renderDetail({ index, code, completed, planned, els, addButton =
   const course = index.get(code);
   els.detail.hidden = false;
   if (!course) {
-    els.detail.innerHTML = `<h3>${esc(code)}</h3><p class="muted">This course is named in a prerequisite but is not in this app’s catalog yet.</p>`;
+    els.detail.innerHTML = `<h3>${esc(code)}</h3><p class="muted">Not in the catalog.</p>`;
     return;
   }
   const known = (c) => index.has(c);
@@ -118,12 +118,12 @@ export function renderDetail({ index, code, completed, planned, els, addButton =
     <div class="badges"><span class="badge">${esc(course.credits || '?')} credits</span>${status}</div>
     <p><b>Prerequisites:</b> ${course.prereq ? linkCodes(treeToText(course.prereq), known) : 'None'}</p>
     ${course.note ? `<p class="meta-line">${esc(course.note)}</p>` : ''}
-    <p><b>Unlocks:</b> ${course.dependents.length ? course.dependents.map((d, i, a) => `<span class="nw"><button type="button" class="code-link" data-code="${esc(d.code)}">${esc(d.code)}</button>${i < a.length - 1 ? ',' : ''}</span>`).join(' ') : 'Nothing in this catalog'}</p>
+    <p><b>Unlocks:</b> ${course.dependents.length ? course.dependents.map((d, i, a) => `<span class="nw"><button type="button" class="code-link" data-code="${esc(d.code)}">${esc(d.code)}</button>${i < a.length - 1 ? ',' : ''}</span>`).join(' ') : 'None'}</p>
     <div class="course-actions">
       ${addButton(code)}
       <button type="button" class="btn" data-search="${esc(code)}">Search ${esc(code)}</button>
       <button type="button" class="btn" data-ask="${esc(code)}">Ask advisor</button>
-      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'I took this'}</button>
+      <button type="button" class="btn${completed.has(code) ? ' on' : ''}" data-complete="${esc(code)}">${completed.has(code) ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'Mark completed'}</button>
     </div>`;
 }
 

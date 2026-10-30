@@ -9,11 +9,11 @@ const BOT_ICON = '<span class="bot-avatar" aria-hidden="true"><svg viewBox="0 0 
 const PLAN_MARK = /\s*\[\[update-plan\]\]\s*/;
 const PLAN_MARKS = /\s*\[\[update-plan\]\]\s*/g;
 
-const GREETING = 'Ask about courses, your plan, or research. 👋';
+const GREETING = 'How can I help with your courses or plan?';
 const SUGGESTIONS = [
   'What can I take after CS 331?',
   'Does my schedule have time conflicts?',
-  'Who does machine learning research?',
+  'Which faculty research machine learning?',
 ];
 
 export function createChat({ els, known, getContext, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange, onPlanRequest }) {
@@ -33,7 +33,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       ? '<span class="typing" aria-label="Thinking"><i></i><i></i><i></i></span>'
       : renderMarkdown(text, known);
     const card = proposals.length && !m.pending && !m.error ? proposalCard(m, i, proposals) : '';
-    const mem = m.memoryNotes?.length ? `<p class="memory-note small muted">Saved to the advisor's memory: ${m.memoryNotes.map(esc).join('; ')}</p>` : '';
+    const mem = m.memoryNotes?.length ? `<p class="memory-note small muted">Saved: ${m.memoryNotes.map(esc).join('; ')}</p>` : '';
     const retry = m.error ? '<button type="button" class="btn retry" data-retry>Try again</button>' : '';
     return `<div class="msg bot${m.error ? ' error' : ''}">${BOT_ICON}<div class="bubble">${body}${card}${mem}${retry}</div></div>`;
   }
@@ -44,10 +44,10 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
     const good = items.filter((x) => x.ok);
     const list = items.map((x) => `<li class="${x.ok ? '' : 'bad'}">${esc(x.label)}${x.why ? ` <span class="muted">· ${esc(x.why)}</span>` : ''}${x.ok ? '' : ` <span class="prob">${esc(x.problem)}</span>`}</li>`).join('');
     const action = m.applied
-      ? '<p class="small">✓ Applied. <button type="button" class="link-btn" data-open-degree>See it on the Degree tab</button></p>'
-      : m.undone && good.length ? `<p class="small">Undone on the Degree tab. <button type="button" class="link-btn" data-apply-proposals="${i}">Apply again</button></p>`
-      : good.length ? `<button type="button" class="btn primary" data-apply-proposals="${i}">Apply ${good.length} change${good.length === 1 ? '' : 's'} to my degree plan</button>` : '';
-    return `<div class="proposal"><h4>Changes to your degree plan</h4><ul>${list}</ul>${action}<p class="small muted">Nothing changes until you press Apply. You can undo each change on the Degree tab.</p></div>`;
+      ? '<p class="small">✓ Applied. <button type="button" class="link-btn" data-open-degree>View on Degree tab</button></p>'
+      : m.undone && good.length ? `<p class="small">Undone. <button type="button" class="link-btn" data-apply-proposals="${i}">Reapply</button></p>`
+      : good.length ? `<button type="button" class="btn primary" data-apply-proposals="${i}">Apply ${good.length} change${good.length === 1 ? '' : 's'} </button>` : '';
+    return `<div class="proposal"><h4>Proposed changes</h4><ul>${list}</ul>${action}</div>`;
   }
 
   function render() {
@@ -89,10 +89,10 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       });
       if (res.status === 503) {
         const j = await res.json().catch(() => ({}));
-        throw Object.assign(new Error('The advisor is not available right now. Try again later.'), { safe: true });
+        throw Object.assign(new Error('The advisor is unavailable. Try again later.'), { safe: true });
       }
       if (!res.ok || !res.body) {
-        let msg = `The server returned an error (${res.status}).`;
+        let msg = `Server error (${res.status}).`;
         try { const j = await res.json(); if (j.error) msg = j.error; } catch { /* not JSON */ }
         throw Object.assign(new Error(msg), { safe: true });
       }
@@ -117,7 +117,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
           else if (evt.type === 'done') finished = true;
         }
       }
-      if (!reply.content.trim()) throw Object.assign(new Error('The advisor sent an empty answer. Try again.'), { safe: true });
+      if (!reply.content.trim()) throw Object.assign(new Error('No response. Try again.'), { safe: true });
     } catch (err) {
       if (err.name === 'AbortError') {
         if (!reply.content) reply.content = '_Stopped._';
@@ -125,7 +125,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       } else {
         reply.error = true;
         reply.retryText = question;
-        reply.content = err.safe ? err.message : 'Could not reach the advisor server. Is it still running?';
+        reply.content = err.safe ? err.message : 'Connection failed. Try again.';
       }
     } finally {
       reply.pending = false;
@@ -198,7 +198,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
   confirmBox.className = 'clear-confirm';
   confirmBox.hidden = true;
   confirmBox.setAttribute('role', 'alertdialog');
-  confirmBox.innerHTML = '<span>Delete the chat messages? Saved preferences and time commitments stay.</span><button type="button" class="btn danger" data-clear-yes>Delete</button><button type="button" class="btn" data-clear-no>Cancel</button>';
+  confirmBox.innerHTML = '<span>Delete chat history? Saved preferences stay.</span><button type="button" class="btn danger" data-clear-yes>Delete</button><button type="button" class="btn" data-clear-no>Cancel</button>';
   els.clear.after(confirmBox);
   const closeConfirm = () => { confirmBox.hidden = true; els.clear.hidden = false; clearTimeout(confirmTimer); };
   els.clear.addEventListener('click', () => {

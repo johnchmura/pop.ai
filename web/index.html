@@ -118,7 +118,7 @@
       <section class="view" id="view-graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
         <div class="card graph-card">
           <div class="graph-top">
-            <label class="graph-opt"><input type="checkbox" data-opt="showDependents"> Show what each course unlocks</label>
+            <label class="graph-opt"><input type="checkbox" data-opt="showDependents"> Show dependent courses</label>
           </div>
           <div class="graph-filter">
             <label for="graph-add">Courses</label>
@@ -131,8 +131,8 @@
           <div class="legend" aria-label="Legend">
             <span><i class="lg-line"></i>Prerequisite</span>
             <span><i class="lg-line co"></i>Corequisite</span>
-            <span><i class="lg-line alt"></i>One of several options</span>
-            <span><i class="lg-taken" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M3 6.2l2 2 4-4.4"/></svg></i>Taken</span>
+            <span><i class="lg-line alt"></i>Alternative</span>
+            <span><i class="lg-taken" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M3 6.2l2 2 4-4.4"/></svg></i>Completed</span>
           </div>
         </div>
         <div class="card graph-detail" id="graph-detail" hidden></div>
@@ -150,7 +150,7 @@
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload your unofficial transcript">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
             <strong>Upload your unofficial transcript</strong>
-            <span class="muted small">Drop a PDF, web page, or screenshot here, or click to choose</span>
+            <span class="muted small">PDF, web page, or screenshot</span>
           </div>
           <input type="file" id="transcript-file" accept=".pdf,.html,.htm,.txt,.png,.jpg,.jpeg,.webp,.gif,application/pdf,text/html,text/plain,image/*" hidden>
           <div class="upload-actions">
@@ -161,17 +161,17 @@
           </div>
           <div id="paste-box" hidden>
             <label for="paste-text" class="sr-only">Transcript text</label>
-            <textarea id="paste-text" rows="6" placeholder="Open your unofficial transcript, select all (Ctrl/Cmd + A), copy, and paste it here."></textarea>
-            <button type="button" class="btn" id="paste-go">Read text</button>
+            <textarea id="paste-text" rows="6" placeholder="Paste the transcript text"></textarea>
+            <button type="button" class="btn" id="paste-go">Read</button>
           </div>
           <div class="upload-status" id="upload-status" aria-live="polite"></div>
-          <p class="hint">Saved only in this browser.</p>
+          <p class="hint">Stored only in this browser.</p>
           <details class="manual">
-            <summary>No transcript? Add completed courses by hand</summary>
+            <summary>Add completed courses manually</summary>
             <div class="chip-input" id="completed-box">
               <div class="chips" id="completed-chips"></div>
               <label for="completed-input" class="sr-only">Completed course</label>
-              <input id="completed-input" type="text" autocomplete="off" placeholder="Type a code and press Enter, e.g. CS 115">
+              <input id="completed-input" type="text" autocomplete="off" placeholder="Course code, e.g. CS 115">
             </div>
             <p class="hint" id="completed-hint"></p>
           </details>

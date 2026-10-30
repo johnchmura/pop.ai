@@ -118,7 +118,7 @@ function eligibilityBadge(course) {
     const g = gradeMap().get(course.code);
     return `<span class="badge ok"><span class="chk-ic" aria-hidden="true">✓</span>Completed${g ? ` · ${esc(g)}` : ''}</span>`;
   }
-  if (transcriptSets().inProgress.has(course.code)) return '<span class="badge">In progress now</span>';
+  if (transcriptSets().inProgress.has(course.code)) return '<span class="badge">In progress</span>';
   const done = completedSet();
   if (!done.size) return '';
   const planned = plannedCourses();
@@ -194,7 +194,7 @@ function sectionRow(s) {
     return `${hl(when)} · ${hl(m.where || 'TBA')}${hl(who)}`;
   }).join('<br>');
   const clash = sectionClashes(s, state.busy);
-  const clashNote = clash.length ? `<div class="busy-note">Clashes with ${[...new Set(clash.map((c) => esc(c.label)))].join(', ')}</div>` : '';
+  const clashNote = clash.length ? `<div class="busy-note">Conflicts with ${[...new Set(clash.map((c) => esc(c.label)))].join(', ')}</div>` : '';
   const seats = s.available == null ? '' : `<span class="seats${s.available <= 0 ? ' full' : ''}">${s.available <= 0 ? 'Full' : `${s.available} open`}</span> · `;
   return `<div class="section-row">
       <div class="section-main">
@@ -216,7 +216,7 @@ function addCourseButton(code) {
   if (!n) return '';
   const added = course.sections.some((s) => state.saved.includes(s.crn));
   const label = added ? '✓ Added' : n === 1 ? 'Add' : `Add · ${n} sections`;
-  const tip = added ? `Remove ${code} from your schedule` : n === 1 ? `Add ${code} (CRN ${course.sections[0].crn}) to your schedule` : `Pick one of the ${n} ${code} sections`;
+  const tip = added ? `Remove ${code} from your schedule` : n === 1 ? `Add ${code} (CRN ${course.sections[0].crn}) to your schedule` : 'Choose a section';
   return `<button type="button" class="add-btn${added ? ' added' : ''}" data-add-course="${esc(code)}" title="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${added}">${label}</button>`;
 }
 
@@ -295,14 +295,14 @@ function courseCard(course) {
     html += `<div class="sections" aria-label="${esc(state.index.semester)} sections">${list.map(sectionRow).join('')}</div>`;
     if (many) html += `<button type="button" class="toggle-sections" data-more="${esc(course.code)}">Show all ${course.sections.length} sections</button>`;
   } else {
-    html += `<p class="meta-line">No ${esc(state.index.semester)} sections in this data.</p>`;
+    html += `<p class="meta-line">Not offered in ${esc(state.index.semester)}.</p>`;
   }
 
   const done = state.completed.includes(course.code);
   const onTranscript = transcriptSets().completed.has(course.code);
   html += `<div class="course-actions">
       <button type="button" class="btn" data-ask="${esc(course.code)}">Ask advisor</button>
-      ${onTranscript ? '' : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'I took this'}</button>`}
+      ${onTranscript ? '' : `<button type="button" class="btn${done ? ' on' : ''}" data-complete="${esc(course.code)}" aria-pressed="${done}">${done ? '<span class="chk-ic" aria-hidden="true">✓</span>Taken' : 'Mark completed'}</button>`}
       ${!course.stub ? `<a class="link-btn" href="${catalogUrl(course.code)}" target="_blank" rel="noopener noreferrer">Catalog ↗</a>` : ''}
     </div>`;
   return `${html}</article>`;
@@ -312,18 +312,17 @@ function courseCard(course) {
 /** A "Search by meaning" button for word searches, like Shift+Enter in Pop. */
 function semanticButton(q) {
   if (!state.health?.semantic || !/[a-z]{3,}/i.test(q) || /^[\s,]*([A-Za-z]{2,4}\s*\d{3}[\s,]*)+$/.test(q)) return '';
-  return `<p class="semantic-row"><button type="button" class="btn" data-semantic="${esc(q)}">Search by meaning: “${esc(q)}”</button>
-    <span class="small muted">Pop finds courses about this topic, even when the words differ.</span></p>`;
+  return `<p class="semantic-row"><button type="button" class="btn" data-semantic="${esc(q)}">Find related courses</button></p>`;
 }
 async function semanticSearch(q) {
   const btn = els.results.querySelector('[data-semantic]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Searching by meaning…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
   try {
     const res = await fetch('/api/search/semantic', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, limit: 15 }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
     const codes = (data.results || []).map((r) => normalizeCode(r.code)).filter((c) => c && known(c) && state.index.courses.get(c).sections.length);
-    if (!codes.length) throw new Error('No courses found for that topic.');
+    if (!codes.length) throw new Error('No matches.');
     setQuery(codes.join(', '), { focusInput: false }); // the comma list shows every match
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = err.message; }
@@ -341,7 +340,7 @@ function renderResults() {
   // search lists only courses with sections this semester; say so when a typed code is not offered
   const notOffered = state.focus.filter((c) => !state.index.courses.get(c)?.sections.length);
   const offNote = notOffered.length
-    ? `<p class="search-note small muted">Not offered in ${esc(state.index.semester)}: ${notOffered.map(esc).join(', ')}. Ask the advisor for the next offering.</p>`
+    ? `<p class="search-note small muted">Not offered in ${esc(state.index.semester)}: ${notOffered.map(esc).join(', ')}.</p>`
     : '';
   if (!total) {
     els.results.innerHTML = `<div class="results-head"><span>No results</span></div>
@@ -892,7 +891,7 @@ async function start() {
   }
   const foot = document.createElement('p');
   foot.className = 'saved-foot';
-  foot.textContent = 'Sample sections — confirm times and seats in the Course Status Report before you register.';
+  foot.textContent = 'Sample sections. Verify in the Course Status Report.';
   $('.saved-card').appendChild(foot);
   els.schedule.foot = foot;
 
@@ -915,7 +914,7 @@ async function start() {
     onPlanRequest: () => buildPlan(), // the advisor marks replies that change the plan
     resolveProposals: (list) => {
       const t = state.transcript;
-      if (!t) return list.map(() => ({ ok: false, label: 'Change', problem: 'Upload your transcript or Degree Works audit on the Degree tab first.' }));
+      if (!t) return list.map(() => ({ ok: false, label: 'Change', problem: 'Upload a transcript on the Degree tab first.' }));
       const program = state.programs.find((p) => p.id === t.programId) || state.programs[0];
       return list.map((p) => resolveProposal(p, program, state.index));
     },

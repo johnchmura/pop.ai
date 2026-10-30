@@ -10,7 +10,7 @@ const X_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 
 function meetingSummary(section) {
   const real = section.meetings.filter((m) => m.days && m.days !== 'TBA' && m.time && m.time !== 'TBA');
-  if (!real.length) return section.bucket === 'Internet' ? 'Online · no set time' : 'Time TBA';
+  if (!real.length) return section.bucket === 'Internet' ? 'Online · no meeting time' : 'Time TBA';
   return real.map((m) => `${m.days} ${m.time.replace(/\s*-\s*/, '–').replace(/ (AM|PM)/g, (x, ap) => ap.toLowerCase())}`).join(', ');
 }
 
@@ -39,7 +39,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
     : '';
 
   if (!items.length) {
-    els.list.innerHTML = '<p class="saved-empty">No saved courses yet. Search for a course and press <strong>Add</strong> on a section.</p>';
+    els.list.innerHTML = '<p class="saved-empty">No saved courses.</p>';
   } else {
     els.list.innerHTML = items.map((it) => {
       const s = it.section;
@@ -50,7 +50,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
         ? `<span class="conflict-note">Time conflict with ${clash.map((c) => `${esc(index.crnMap.get(c.other).course)} on ${DAY_LABELS[c.day][0]}${DAY_LABELS[c.day].slice(1).toLowerCase()} ${formatHour(c.start)}`).join(', ')}</span>`
         : '';
       const busyHits = sectionClashes(s, busy);
-      const busyText = busyHits.length ? `<span class="conflict-note">Clashes with ${[...new Set(busyHits.map((h) => esc(h.label)))].join(', ')}</span>` : '';
+      const busyText = busyHits.length ? `<span class="conflict-note">Conflicts with ${[...new Set(busyHits.map((h) => esc(h.label)))].join(', ')}</span>` : '';
       const seats = s.available == null ? '' : `<small>${s.available} seat${s.available === 1 ? '' : 's'} open · CRN ${esc(s.crn)}</small>`;
       return `<div class="saved-item c-${fam}${clash.length || busyHits.length ? ' has-conflict' : ''}" data-crn="${esc(s.crn)}">
           <div>
@@ -126,7 +126,7 @@ export function renderSchedule({ index, savedCrns, busy = [], els, onRemove, onO
 
   // Online / TBA sections
   els.unscheduled.innerHTML = unscheduled.length
-    ? `Not on the grid (online or time TBA): ${unscheduled.map((u) => `<strong>${esc(u.label)}</strong> (CRN ${esc(u.key)})`).join(', ')}`
+    ? `Unscheduled (online or TBA): ${unscheduled.map((u) => `<strong>${esc(u.label)}</strong> (CRN ${esc(u.key)})`).join(', ')}`
     : '';
 
   return { place, conflicts };

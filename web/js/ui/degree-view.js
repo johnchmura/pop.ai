@@ -151,18 +151,18 @@ function programBanner(programs, program, transcript) {
   const d = transcript.detected;
   const alts = (d?.alternatives || []).map((a) => programs.find((p) => p.id === a.id)).filter((p) => p && p.id !== program.id);
   let tone = 'info';
-  let title = `Your program: <strong>${esc(program.name)}</strong>`;
-  let text = transcript.chosenByUser ? 'You chose this program.' : 'Pick your program so the plan fits you.';
+  let title = `Program: <strong>${esc(program.name)}</strong>`;
+  let text = transcript.chosenByUser ? '' : 'Select your program.';
   if (d && !transcript.chosenByUser) {
-    if (d.confidence === 'high') { tone = 'ok'; title = `We found your program: <strong>${esc(program.name)}</strong>`; text = d.reason; }
-    else { tone = 'warn'; title = `We think your program is <strong>${esc(program.name)}</strong>`; text = `${d.reason} Please check it.`; }
+    if (d.confidence === 'high') { tone = 'ok'; title = `Detected program: <strong>${esc(program.name)}</strong>`; text = d.reason; }
+    else { tone = 'warn'; title = `Likely program: <strong>${esc(program.name)}</strong>`; text = `${d.reason} Confirm below.`; }
   }
   return `<div class="program-banner ${tone}">
-      <div class="pb-text"><p class="pb-title">${title}</p><p class="small muted">${esc(text)}</p></div>
-      <label class="pb-pick small muted">Not right? Change program
+      <div class="pb-text"><p class="pb-title">${title}</p>${text ? `<p class="small muted">${esc(text)}</p>` : ''}</div>
+      <label class="pb-pick small muted">Change program
         <select id="program-select" aria-label="Degree program">${programOptions(programs, program.id)}</select>
       </label>
-      ${alts.length ? `<div class="pb-alts small muted">Other likely matches: ${alts.map((p) => `<button type="button" class="link-btn" data-set-program="${esc(p.id)}">${esc(p.name)}</button>`).join(' · ')}</div>` : ''}
+      ${alts.length ? `<div class="pb-alts small muted">Other matches: ${alts.map((p) => `<button type="button" class="link-btn" data-set-program="${esc(p.id)}">${esc(p.name)}</button>`).join(' · ')}</div>` : ''}
     </div>`;
 }
 
@@ -231,8 +231,8 @@ export function renderDegree(el, ctx) {
 
   // ----- 1. summary -----
   const headline = !usedTerms.length && !shown.later?.length
-    ? 'Every requirement is done or in progress 🎓'
-    : graduation ? `On track to finish in <strong>${esc(graduation)}</strong>` : `<strong>${t.remaining}</strong> credits to go`;
+    ? 'All requirements complete or in progress'
+    : graduation ? `Expected graduation: <strong>${esc(graduation)}</strong>` : `<strong>${t.remaining}</strong> credits to go`;
   let html = `<div class="card degree-hero">
       <div class="hero-top">
         <div>
@@ -249,7 +249,7 @@ export function renderDegree(el, ctx) {
       <ul class="legend-row">
         <li><i class="dot done"></i><strong>${t.done}</strong> done</li>
         <li><i class="dot ip"></i><strong>${t.inProgress}</strong> in progress</li>
-        ${t.planned ? `<li><i class="dot pl"></i><strong>${t.planned}</strong> saved for ${esc(index.semester)}</li>` : ''}
+        ${t.planned ? `<li><i class="dot pl"></i><strong>${t.planned}</strong> saved</li>` : ''}
         <li><i class="dot togo"></i><strong>${t.remaining}</strong> to go</li>
         <li class="muted">of ${t.required} credits</li>
       </ul>
@@ -279,7 +279,7 @@ export function renderDegree(el, ctx) {
     html += `<div class="timeline">${shown.terms.map((term, i) => (term.items.length ? termCard(term, i, firstIdx, known, titleOf, addFor) : '')).join('')}</div>`;
   }
   if (shown.later?.length) {
-    html += `<section class="term later"><header class="term-head"><h3>Not placed yet</h3></header><ul class="term-list">${shown.later.map((it) => planRow(it, known, titleOf)).join('')}</ul></section>`;
+    html += `<section class="term later"><header class="term-head"><h3>Unscheduled</h3></header><ul class="term-list">${shown.later.map((it) => planRow(it, known, titleOf)).join('')}</ul></section>`;
   }
   const general = check.issues.filter((x) => !x.code && x.term == null && x.level === 'error');
   const termWide = check.issues.filter((x) => !x.code && x.term != null && x.level === 'error');
@@ -291,7 +291,7 @@ export function renderDegree(el, ctx) {
   // ----- 2b. changes from the chat or the student -----
   if (transcript.changes?.length) {
     html += `<div class="card changes-card">
-        <div class="card-head"><h2 class="card-title">Your changes</h2></div>
+        <div class="card-head"><h2 class="card-title">Adjustments</h2></div>
         <ul class="change-list">${transcript.changes.map((c) => `<li><span>${esc(describeChange(c))}</span><button type="button" class="link-btn" data-undo-change="${esc(c.id)}">Undo</button></li>`).join('')}</ul>
       </div>`;
   }
@@ -325,7 +325,7 @@ export function renderDegree(el, ctx) {
   html += tracksCard(program, completed, inProgress);
 
   // ----- 5. notes -----
-  html += `<p class="small muted audit-note">Planning aid, not an official audit · <a href="${esc(program.source)}" target="_blank" rel="noopener noreferrer">catalog requirements ↗</a></p>`;
+  html += `<p class="small muted audit-note">Unofficial planning aid · <a href="${esc(program.source)}" target="_blank" rel="noopener noreferrer">Catalog requirements ↗</a></p>`;
 
   el.innerHTML = html;
   return { audit, ruleView, shown, check, source: useAi ? 'claude' : 'rules' };
@@ -390,9 +390,9 @@ export function wireDegree(els, hooks) {
 
   async function handleFile(file) {
     if (!file) return;
-    if (file.size > MAX_FILE) { status('That file is larger than 8 MB. Try the PDF from Banner, or paste the text.', 'warn'); return; }
+    if (file.size > MAX_FILE) { status('File exceeds 8 MB. Use the Banner PDF or paste the text.', 'warn'); return; }
     const kind = kindOf(file);
-    if (kind === 'unknown') { status('Use a PDF, HTML, TXT, PNG, or JPG file.', 'warn'); return; }
+    if (kind === 'unknown') { status('Unsupported file. Use PDF, HTML, TXT, PNG, or JPG.', 'warn'); return; }
     lastInput = { kind, file };
     try {
       // the text layer helps find the program in the header; scans have none, which is fine
@@ -401,7 +401,7 @@ export function wireDegree(els, hooks) {
       await readTranscript();
     } catch (err) {
       console.error(err);
-      status('Could not read that file. Try again, or paste the text.', 'warn');
+      status('Could not read the file. Try again or paste the text.', 'warn');
     }
   }
 
@@ -418,10 +418,10 @@ export function wireDegree(els, hooks) {
       }
       const res = await fetch('/api/transcript', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 503) throw new Error('Reading transcripts is not available right now. Try again later.');
+      if (res.status === 503) throw new Error('Transcript reading is unavailable. Try again later.');
       if (!res.ok) throw new Error(data.error || 'Could not read the transcript. Try again.');
       const courses = cleanRecords(data.courses);
-      if (!courses.length) throw new Error('No courses found in that file. Try the unofficial transcript PDF from Banner.');
+      if (!courses.length) throw new Error('No courses found. Use the unofficial transcript PDF from Banner.');
       apply(courses, lastInput.file?.name || 'Pasted transcript', data.warnings || [], { headerText: lastInput.text || '', majors: data.majors || [] });
       status('');
       hooks.onNewTranscript?.();
@@ -451,7 +451,7 @@ export function wireDegree(els, hooks) {
   });
   els.clear.addEventListener('click', () => {
     hooks.setTranscript(null);
-    status('Transcript cleared from this browser.');
+    status('Transcript cleared.');
   });
 
   // edits in the body
