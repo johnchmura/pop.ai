@@ -4,7 +4,7 @@ Render runs this as a cron job (render.yaml). The web service rebuilds its datab
 on every deploy, so a push here leads to a deploy with fresh data.
 
   sections  IIT's Course Status Report, for the semester in seed/advisor.json (every run)
-  faculty   IIT's online directory (iit.edu/directory/people), when seed/faculty.json is a week old
+  faculty   IIT's online directory (iit.edu/directory/people), when seed/faculty.json is 3 weeks old
 
 A refresh that returns much less data than the current seed is treated as a failed scrape,
 and the old file is kept.
@@ -35,7 +35,7 @@ FACULTY_TYPE = 21  # the directory's "Faculty" filter
 USER_AGENT = "pop-advisor/1.0 (Illinois Tech course advisor; https://github.com/johnchmura/pop.ai)"
 
 MIN_SHARE = {"sections": 0.6, "faculty": 0.8}
-FACULTY_MAX_AGE_DAYS = 7
+FACULTY_MAX_AGE_DAYS = 21  # the job runs monthly, so each run refreshes faculty
 
 
 def log(msg: str) -> None:
@@ -279,7 +279,7 @@ def push_seed(files: list[Path], message: str) -> bool:
 
 def run(*, sections: bool = True, faculty: str = "auto", push: bool = False, seed_dir: Path = SEED_DIR,
         fetch_rows: Callable | None = None, get: Callable[[str], str] = http_get) -> int:
-    """faculty: 'auto' (when a week old), 'yes', or 'no'. Returns 0 when every step worked, else 1."""
+    """faculty: 'auto' (when 3 weeks old), 'yes', or 'no'. Returns 0 when every step worked, else 1."""
     changed: list[Path] = []
     notes: list[str] = []
     failed = False
@@ -310,7 +310,7 @@ def run(*, sections: bool = True, faculty: str = "auto", push: bool = False, see
             failed = True
             log(f"faculty: FAILED, seed kept. {exc}")
     else:
-        log("faculty: skipped" if faculty == "no" else "faculty: less than a week old, skipped")
+        log("faculty: skipped" if faculty == "no" else "faculty: less than 3 weeks old, skipped")
     if changed and push:
         try:
             push_seed(changed, f"Refresh data from IIT: {', '.join(notes)}")

@@ -230,7 +230,7 @@ def main(argv: list[str] | None = None) -> None:
 
     ref_p = sub.add_parser("advisor-refresh", help="Scrape IIT's sections and faculty into seed/ (Render's cron job)")
     ref_p.add_argument("--no-sections", action="store_true", help="Skip the Course Status Report")
-    ref_p.add_argument("--faculty", choices=["auto", "yes", "no"], default="auto", help="auto: only when seed/faculty.json is a week old")
+    ref_p.add_argument("--faculty", choices=["auto", "yes", "no"], default="auto", help="auto: only when seed/faculty.json is 3 weeks old")
     ref_p.add_argument("--push", action="store_true", help="Commit changed seed files to GitHub (needs GITHUB_TOKEN)")
 
     serve_p = sub.add_parser("advisor-serve", help="Run the advisor web app")

@@ -52,7 +52,7 @@ Use `--port 3001` if port 3000 is busy. Without `ANTHROPIC_API_KEY`, the app sti
 
 The chat helps students find faculty whose research fits their interests. Ask about research, labs, or professors ("Who does machine learning research?"). The server adds the best-matching faculty to Claude's context, so the advisor names real people, links their profiles, and suggests the courses that prepare for their work. Without an API key, the offline answer lists the matching faculty.
 
-The data comes from IIT's online directory (iit.edu/directory/people), read the way Ishaan Goel's [iit-faculty-search](https://github.com/igoeldc/iit-faculty-search) scraper reads it. `seed/faculty.json` holds a copy, and the daily refresh job (see Deploy) updates it weekly. To refresh it now:
+The data comes from IIT's online directory (iit.edu/directory/people), read the way Ishaan Goel's [iit-faculty-search](https://github.com/igoeldc/iit-faculty-search) scraper reads it. `seed/faculty.json` holds a copy, and the monthly refresh job (see Deploy) updates it. To refresh it now:
 
 ```bash
 python main.py advisor-refresh --no-sections --faculty yes
@@ -115,12 +115,12 @@ node --test web/test/*.test.mjs                         # the advisor page's log
 
 `render.yaml` deploys the advisor on Render: **New → Blueprint**, pick the repo, and paste `ANTHROPIC_API_KEY`. The build loads `seed/` into a new database. The Pop page and semantic search are not deployed.
 
-### Daily data refresh
+### Monthly data refresh
 
 The web service never scrapes. It uses the data in `seed/`. A Render cron job, `pop-advisor-refresh`, keeps `seed/` fresh:
 
-1. Every day at 9:17 UTC, it reads IIT's Course Status Report for the semester in `seed/advisor.json`.
-2. Once a week, it also reads every faculty profile in IIT's directory (about 15 minutes).
+1. On the 1st of every month at 9:17 UTC, it reads IIT's Course Status Report for the semester in `seed/advisor.json`.
+2. It also reads every faculty profile in IIT's directory (about 15 minutes).
 3. It commits any changed seed files to GitHub. The push makes Render redeploy the advisor with the new data.
 
 Setup: make a GitHub token that can push to this repository (a fine-grained token with **Contents: Read and write**), and paste it as `GITHUB_TOKEN` when the Blueprint asks. The job pushes to the branch Render deploys. To push somewhere else, set `DATA_REPO` (`owner/repo`) and `DATA_BRANCH`.

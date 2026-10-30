@@ -497,8 +497,8 @@ class RefreshTests(unittest.TestCase):
 
         seed_dir = self.seed_copy()
         read_on = dt.date.fromisoformat(json.loads((seed_dir / "faculty.json").read_text(encoding="utf-8"))["read_on"])
-        self.assertFalse(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=6)))
-        self.assertTrue(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=7)))
+        self.assertFalse(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=20)))
+        self.assertTrue(refresh.faculty_is_stale(seed_dir, read_on + dt.timedelta(days=21)))
         (seed_dir / "faculty.json").unlink()
         self.assertTrue(refresh.faculty_is_stale(seed_dir))
 
