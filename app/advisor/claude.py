@@ -119,6 +119,9 @@ def _handle_event(raw: str) -> list[dict[str, Any]]:
     return []
 
 
+_NO_TEMPERATURE: set[str] = set()  # models that reject the temperature setting
+
+
 async def call_claude(
     *, api_key: str, base_url: str, model: str, max_tokens: int,
     system: list[dict] | str, messages: list[dict], timeout: float = 120.0, temperature: float | None = None,
@@ -126,10 +129,15 @@ async def call_claude(
     """One request, not streamed. Returns (text, stop_reason). Raises ClaudeError."""
     url = f"{base_url.rstrip('/')}/v1/messages"
     body = {"model": model, "max_tokens": max_tokens, "system": system, "messages": messages}
-    if temperature is not None:
+    # some models do not take `temperature`; then the request is sent without it (and remembered)
+    if temperature is not None and model not in _NO_TEMPERATURE:
         body["temperature"] = temperature
     async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=15.0)) as client:
         res = await client.post(url, headers=_headers(api_key), json=body)
+        if res.status_code == 400 and "temperature" in body and "temperature" in res.text:
+            _NO_TEMPERATURE.add(model)
+            body.pop("temperature")
+            res = await client.post(url, headers=_headers(api_key), json=body)
     if res.status_code != 200:
         try:
             detail = res.json()

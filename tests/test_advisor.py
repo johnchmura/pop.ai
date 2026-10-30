@@ -150,6 +150,7 @@ class FakeClaude(BaseHTTPRequestHandler):
 
     requests: list = []
     status = 200
+    reject_temperature = False
 
     def log_message(self, *_args):
         pass
@@ -157,6 +158,13 @@ class FakeClaude(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["content-length"])))
         FakeClaude.requests.append({"headers": dict(self.headers), "body": body})
+        if FakeClaude.reject_temperature and "temperature" in body:
+            out = json.dumps({"type": "error", "error": {"type": "invalid_request_error", "message": "`temperature` is deprecated for this model."}}).encode()
+            self.send_response(400)
+            self.send_header("content-length", str(len(out)))
+            self.end_headers()
+            self.wfile.write(out)
+            return
         if FakeClaude.status != 200:
             out = json.dumps({"error": {"type": "x", "message": "nope"}}).encode()
             self.send_response(FakeClaude.status)
@@ -283,6 +291,21 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(again.json()["text"], r.json()["text"])
         self.assertEqual(len(FakeClaude.requests), n)
         self.assertEqual(self.client.post("/api/plan", json={"nope": 1}).status_code, 400)
+
+    def test_models_without_temperature(self):
+        import app.advisor.claude as claude_mod
+
+        FakeClaude.reject_temperature = True
+        claude_mod._NO_TEMPERATURE.clear()
+        try:
+            r = self.client.post("/api/plan", json={"studentContext": "STUDENT CONTEXT\nno temperature", "userText": "Make my plan."})
+            self.assertEqual(r.status_code, 200)  # retried without temperature
+            n = len(FakeClaude.requests)
+            self.client.post("/api/plan", json={"studentContext": "STUDENT CONTEXT\nno temperature 2", "userText": "Make my plan."})
+            self.assertNotIn("temperature", FakeClaude.requests[n]["body"])  # remembered: sent without it at once
+        finally:
+            FakeClaude.reject_temperature = False
+            claude_mod._NO_TEMPERATURE.clear()
 
     def test_transcript(self):
         r = self.client.post("/api/transcript", json={"text": "CS 115 A"})
