@@ -3,6 +3,7 @@
 import { esc, renderMarkdown, store } from './util.js';
 import { parseProposals } from '../core/changes.js';
 import { parseMemory } from '../core/commitments.js';
+import { parseCourseCards } from '../core/course-cards.js';
 
 const BOT_ICON = '<span class="bot-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M2 13v2M22 13v2"/></svg></span>';
 // the advisor ends a reply with this when the student asks to change the degree plan
@@ -16,7 +17,7 @@ const SUGGESTIONS = [
   'Which faculty research machine learning?',
 ];
 
-export function createChat({ els, known, getContext, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange, onPlanRequest }) {
+export function createChat({ els, known, courseOf = () => null, getContext, onCodeClick, resolveProposals, applyProposals, onMemory, openDegree, onChange, onPlanRequest }) {
   let messages = store.get('chat', []);
   if (!Array.isArray(messages)) messages = [];
   messages = messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-40);
@@ -28,14 +29,31 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
   function bubble(m, i) {
     if (m.role === 'user') return `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`;
     if (m.note) return `<div class="msg note" role="status"><span class="chk-ic" aria-hidden="true">✓</span>${esc(m.content)}</div>`;
-    const { text, proposals } = parseProposals(parseMemory(m.content.replace(PLAN_MARKS, ' ')).text);
+    const stripped = parseMemory(m.content.replace(PLAN_MARKS, ' ')).text;
+    const { text: afterCourses, courses } = parseCourseCards(stripped);
+    const { text, proposals } = parseProposals(afterCourses);
+    const status = m.pending && m.status ? `<p class="small muted">${esc(m.status)}</p>` : '';
     const body = m.pending && !text
-      ? '<span class="typing" aria-label="Thinking"><i></i><i></i><i></i></span>'
+      ? (status || '<span class="typing" aria-label="Thinking"><i></i><i></i><i></i></span>')
       : renderMarkdown(text, known);
+    const picks = !m.pending && !m.error ? courseCards(courses) : '';
     const card = proposals.length && !m.pending && !m.error ? proposalCard(m, i, proposals) : '';
     const mem = m.memoryNotes?.length ? `<p class="memory-note small muted">Saved: ${m.memoryNotes.map(esc).join('; ')}</p>` : '';
     const retry = m.error ? '<button type="button" class="btn retry" data-retry>Try again</button>' : '';
-    return `<div class="msg bot${m.error ? ' error' : ''}">${BOT_ICON}<div class="bubble">${body}${card}${mem}${retry}</div></div>`;
+    return `<div class="msg bot${m.error ? ' error' : ''}">${BOT_ICON}<div class="bubble">${body}${text ? status : ''}${picks}${card}${mem}${retry}</div></div>`;
+  }
+
+  /** Catalog cards for the advisor-courses block. Unknown codes are left out. */
+  function courseCards(courses) {
+    const html = courses.map((c) => {
+      const course = courseOf(c.code);
+      if (!course) return '';
+      const title = course.title ? `<span class="cc-title">${esc(course.title)}</span>` : '';
+      const credits = course.credits ? `<span class="cc-cr">${esc(course.credits)} cr</span>` : '';
+      const why = c.why ? `<span class="cc-why">${esc(c.why)}</span>` : '';
+      return `<button type="button" class="chat-course" data-code="${esc(c.code)}"><span class="cc-top"><span class="cc-code">${esc(c.code)}</span>${title}${credits}</span>${why}</button>`;
+    }).join('');
+    return html ? `<div class="chat-courses">${html}</div>` : '';
   }
 
   /** The "Changes to your degree plan" card under an answer. */
@@ -112,7 +130,8 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
           if (!line) continue;
           let evt;
           try { evt = JSON.parse(line.slice(5)); } catch { continue; }
-          if (evt.type === 'text') { reply.content += evt.text; renderSoon(); }
+          if (evt.type === 'text') { reply.status = ''; reply.content += evt.text; renderSoon(); }
+          else if (evt.type === 'status') { reply.status = evt.text || 'Looking up courses...'; renderSoon(); }
           else if (evt.type === 'error') throw Object.assign(new Error(evt.message), { safe: true });
           else if (evt.type === 'done') finished = true;
         }
@@ -129,6 +148,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
       }
     } finally {
       reply.pending = false;
+      delete reply.status;
       if (!reply.error && PLAN_MARK.test(reply.content)) {
         reply.content = reply.content.replace(PLAN_MARKS, '').trimEnd();
         onPlanRequest?.();
@@ -181,7 +201,7 @@ export function createChat({ els, known, getContext, onCodeClick, resolveProposa
     if (e.target.closest('[data-open-degree]')) return openDegree?.();
     const s = e.target.closest('[data-suggest]');
     if (s) return ask(s.dataset.suggest);
-    const code = e.target.closest('.code-link');
+    const code = e.target.closest('.code-link, .chat-course');
     if (code) return onCodeClick(code.dataset.code);
     if (e.target.closest('[data-retry]')) {
       const last = messages[messages.length - 1];

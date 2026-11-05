@@ -21,7 +21,7 @@ cd pop.ai
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt     # everything, including semantic search
-cp .env.example .env                # add ANTHROPIC_API_KEY for Claude chat (optional)
+cp .env.example .env                # add ANTHROPIC_API_KEY, or OPENAI_API_KEY with LLM_PROVIDER=openai
 ```
 
 For the advisor only, `pip install -r requirements-advisor.txt` is enough. It skips the large machine-learning libraries, so semantic search is off.
@@ -46,7 +46,7 @@ Without `--keep-catalog` and `--keep-sections`, `advisor-seed` replaces the cata
 python main.py advisor-serve        # http://localhost:3000
 ```
 
-Use `--port 3001` if port 3000 is busy. The chat, transcript reading, and plans need `ANTHROPIC_API_KEY`. If the database is empty on the first start, the advisor loads `seed/` by itself.
+Use `--port 3001` if port 3000 is busy. The chat, transcript reading, and plans need an API key. Set `ANTHROPIC_API_KEY` for Claude, or `LLM_PROVIDER=openai` and `OPENAI_API_KEY` for OpenAI (default model `gpt-5-mini`). Each chat sends the courses named in the question, not the whole catalog. If the database is empty on the first start, the advisor loads `seed/` by itself.
 
 ## Faculty search
 

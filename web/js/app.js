@@ -1,7 +1,7 @@
 // advisor. — main app: loads data, runs search, and wires the four tabs.
 
 import { buildIndex, creditNumber } from './core/catalog.js';
-import { search, highlightPieces } from './core/search.js';
+import { search, highlightPieces, keywordsFor } from './core/search.js';
 import { normalizeCode, treeToText, evaluate, missingParts } from './core/prereq.js';
 import { esc, $, $$, store, linkCodes, debounce } from './ui/util.js';
 import { renderSchedule, wireSchedule } from './ui/schedule-view.js';
@@ -315,18 +315,39 @@ function semanticButton(q) {
   if (!state.health?.semantic || !/[a-z]{3,}/i.test(q) || /^[\s,]*([A-Za-z]{2,4}\s*\d{3}[\s,]*)+$/.test(q)) return '';
   return `<p class="semantic-row"><button type="button" class="btn" data-semantic="${esc(q)}">Find related courses</button></p>`;
 }
+function searchPlaceholder() {
+  const phone = window.matchMedia('(max-width: 960px)').matches;
+  if (state.health?.semantic) return phone ? 'Search, or Shift+Enter for related' : 'Search courses, or Shift+Enter for related courses';
+  return 'Search courses, e.g. CS 331';
+}
 async function semanticSearch(q) {
+  const query = String(q || '').trim();
+  if (!query) return;
   const btn = els.results.querySelector('[data-semantic]');
   if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
   try {
-    const res = await fetch('/api/search/semantic', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query: q, limit: 15 }) });
+    const res = await fetch('/api/search/semantic', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query, limit: 15 }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
     const codes = (data.results || []).map((r) => normalizeCode(r.code)).filter((c) => c && known(c) && state.index.courses.get(c).sections.length);
     if (!codes.length) throw new Error('No matches.');
-    setQuery(codes.join(', '), { focusInput: false }); // the comma list shows every match
+    state.query = query;
+    state.focus = [];
+    state.keywords = keywordsFor(query);
+    state.results = codes.map((code) => ({ course: state.index.courses.get(code), score: 0, part: 0 }));
+    state.shown = 25;
+    state.expanded.clear();
+    state.compactOpen.clear();
+    renderResults();
+    renderGraphTab();
   } catch (err) {
-    if (btn) { btn.disabled = false; btn.textContent = err.message; }
+    const message = err.message || 'Semantic search failed.';
+    if (btn) { btn.disabled = false; btn.textContent = message; }
+    else {
+      els.defaults.hidden = true;
+      els.results.hidden = false;
+      els.results.innerHTML = `<p class="empty">${esc(message)}</p>`;
+    }
   }
 }
 
@@ -372,7 +393,7 @@ function setQuery(text, { focusInput = true } = {}) {
   runSearch();
   paneLeft?.(); // phone: show the search results
   if (focusInput) els.search.focus();
-  window.scrollTo({ top: 0 });
+  document.getElementById('left').scrollTo({ top: 0 });
 }
 
 const updateHash = debounce(() => {
@@ -542,7 +563,8 @@ function setPlan(plan) {
  * server answers at temperature 0, and an exact repeat reuses the earlier answer.
  */
 async function buildPlan({ fromChat = false } = {}) {
-  if (state.plan.busy || !state.transcript || state.health?.mode !== 'claude') return;
+  const aiOn = state.health?.mode && state.health.mode !== 'offline';
+  if (state.plan.busy || !state.transcript || !aiOn) return;
   state.plan.busy = true;
   renderDegreeTab();
   try {
@@ -602,7 +624,6 @@ function setTab(tab) {
   $('#view-chat').hidden = tab !== 'chat';
   $('#view-graph').hidden = tab !== 'graph';
   $('#view-degree').hidden = tab !== 'degree';
-  document.querySelector('.app').classList.toggle('wide-right', tab === 'degree');
   $('#chat-fab').classList.toggle('hide', tab === 'chat');
   if (tab === 'schedule') requestAnimationFrame(() => scheduleLayout?.place());
   if (tab === 'graph') renderGraphTab();
@@ -679,6 +700,10 @@ function wire() {
   });
   els.search.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setQuery('');
+    else if (e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      semanticSearch(els.search.value);
+    }
   });
   $('#logo-link').addEventListener('click', (e) => { e.preventDefault(); setQuery(''); });
 
@@ -787,13 +812,15 @@ function wire() {
 
   // tabs (click + arrow keys)
   const tabs = $$('.tab');
+  for (const view of $$('.right > .view')) view.addEventListener('scroll', () => closeSectionPicker(), { passive: true });
+
   tabs.forEach((t, i) => {
     t.addEventListener('click', () => setTab(t.dataset.tab));
     t.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
       const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
       setTab(next.dataset.tab);
-      next.focus();
+      next.focus({ preventScroll: true });
     });
   });
 
@@ -898,7 +925,12 @@ async function start() {
   }
   state.index = buildIndex(catalog, sections, forecast);
   state.programs = programs.programs || [];
-  fetch('/api/health').then((r) => r.json()).then((h) => { state.health = h; renderDegreeTab(); renderResults(); }).catch(() => {});
+  fetch('/api/health').then((r) => r.json()).then((h) => {
+    state.health = h;
+    els.search.placeholder = searchPlaceholder();
+    renderDegreeTab();
+    renderResults();
+  }).catch(() => {});
   const idx = state.index;
 
   // drop saved CRNs that no longer exist (for example after importing new data)
@@ -929,6 +961,7 @@ async function start() {
       clear: $('#chat-clear'),
     },
     known,
+    courseOf: (code) => state.index?.get(code) || null,
     // STUDENT CONTEXT is built here in the page; the server adds COURSE DATA from Pop's database
     getContext: (question) => studentContextBlock(state.index, question, readClientContext(chatContext(), state.index), state.programs),
     onCodeClick: (code) => setQuery(code),
@@ -994,7 +1027,7 @@ async function start() {
     appEl.classList.toggle('show-right', pane === 'right');
     $('#mtab-search').classList.toggle('on', pane === 'left');
     if (pane === 'left') for (const t of $$('.tab')) t.setAttribute('aria-selected', 'false');
-    else window.scrollTo({ top: 0 });
+    else if (phone.matches) document.getElementById('right').scrollTo({ top: 0 });
   };
   $('#mtab-search').addEventListener('click', () => showPane('left'));
   for (const t of $$('.tab')) t.addEventListener('click', () => showPane('right'));
@@ -1003,7 +1036,7 @@ async function start() {
   paneHook = () => { if (ready && phone.matches) showPane('right'); };
   startPhone = () => { ready = true; if (phone.matches) showPane('left'); };
   paneLeft = () => { if (ready && phone.matches) showPane('left'); };
-  els.search.placeholder = phone.matches ? 'Search courses, e.g. CS 331' : els.search.placeholder;
+  els.search.placeholder = searchPlaceholder();
   renderScheduleTab();
   setTab(state.tab);
   startPhone?.();

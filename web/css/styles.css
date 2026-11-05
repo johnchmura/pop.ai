@@ -518,6 +518,18 @@ mark { background: var(--match-bg); color: var(--match-text); border-radius: 3px
 .bubble .md-h { font-weight: 700; }
 .bubble a { color: var(--focus); }
 .bubble .retry { margin-top: 8px; }
+.chat-courses { display: flex; flex-direction: column; gap: 8px; width: 92%; margin: 12px auto; }
+.chat-course {
+  display: block; width: 100%; text-align: left; cursor: pointer; font: inherit;
+  border: 1px solid var(--card-border); border-left: 3px solid var(--focus); border-radius: 12px;
+  padding: 10px 12px 10px 14px; background: var(--card); color: inherit;
+}
+.chat-course:hover { border-color: var(--focus); }
+.cc-top { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.cc-code { font-weight: 800; color: var(--focus); }
+.cc-title { font-weight: 600; color: var(--ink); }
+.cc-cr { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 600; }
+.cc-why { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .typing { display: inline-flex; gap: 4px; padding: 6px 0; }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); animation: blink 1.2s infinite; }
 .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
@@ -665,10 +677,6 @@ button.req-chip { cursor: pointer; }
 .meta-line .tent { color: var(--muted); font-size: 12.5px; }
 
 /* ----- Degree page, plan-first layout ----- */
-@media (min-width: 1100px) {
-  .app.wide-right { grid-template-columns: minmax(0, 38fr) minmax(0, 62fr); }
-  .app.wide-right .logo { font-size: clamp(56px, 6.4vw, 110px); }
-}
 .upload-summary { display: none; align-items: center; gap: 12px; }
 .upload-summary svg { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linejoin: round; }
 .us-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -1292,7 +1300,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 .left { container-type: inline-size; }
 .logo { font-size: clamp(48px, 24cqi, 220px); }
 .tagline { font-size: clamp(12px, 2.4cqi, 17px); }
-.app .logo, .app.wide-right .logo { font-size: clamp(48px, 24cqi, 220px); }
+.app .logo { font-size: clamp(48px, 24cqi, 220px); }
 
 /* suggested courses that match what the chat discussed */
 .pr-suggest .sug.chat { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 8%, var(--card)); }
@@ -1387,3 +1395,57 @@ input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--
 .confirm-dialog h2 { margin: 0 0 8px; font-size: 18px; color: var(--ink); }
 .confirm-dialog p { margin: 0 0 18px; font-size: 14px; line-height: 1.5; color: var(--muted); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* desktop: columns stay put, and the right pane stays on screen while the left list scrolls */
+@media (min-width: 961px) {
+  .view, .card, .graph-scroll, .timeline, .left-list, .plan-notes, .t-scroll, .program-inline {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .right {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: calc(100% * 660 / 1440);
+    height: 100dvh;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .right > .view:not([hidden]) {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .splitter {
+    position: fixed;
+    top: 0;
+    bottom: auto;
+    height: 100dvh;
+  }
+}
+
+html, body { height: 100%; overflow: hidden; }
+.app { height: 100dvh; overflow: hidden; }
+.left { height: 100dvh; overflow-x: hidden; overflow-y: auto; padding-top: 0; }
+.left-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+  width: auto;
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: var(--left-bg);
+  margin-left: calc(-1 * clamp(20px, 5vw, 72px));
+  margin-right: calc(-1 * clamp(20px, 5vw, 72px));
+  padding: 62px clamp(20px, 5vw, 72px) 12px;
+}
+.left-head .search-card, .left-head .toggles { width: auto; max-width: none; align-self: stretch; }
+@media (max-width: 960px) {
+  .left-head { margin-left: -24px; margin-right: -24px; padding: 60px 24px 12px; }
+  .app.show-right .right { height: 100dvh; overflow-y: auto; }
+  .app.show-right .right > .view:not([hidden]) { flex-shrink: 0; }
+}

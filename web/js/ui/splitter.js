@@ -12,13 +12,23 @@ export function initSplitter({ app, left, handle }) {
   let pct = Number(store.get('splitPct', 0)) || 0; // 0 = default layout
   if (pct && (pct < MIN || pct > MAX)) pct = 0;
 
+  const right = document.getElementById('right');
   const place = () => {
     handle.hidden = !media.matches;
-    if (!media.matches) { app.style.gridTemplateColumns = ''; return; }
+    if (!media.matches) {
+      app.style.gridTemplateColumns = '';
+      right.style.left = '';
+      right.style.right = '';
+      right.style.width = '';
+      return;
+    }
     app.style.gridTemplateColumns = pct ? `${pct}% minmax(0, 1fr)` : '';
-    const x = left.getBoundingClientRect().right - app.getBoundingClientRect().left;
-    handle.style.left = `${x}px`;
-    const now = Math.round((x / app.clientWidth) * 100);
+    const edge = left.getBoundingClientRect().right;
+    handle.style.left = `${edge}px`;
+    right.style.left = `${edge}px`;
+    right.style.right = '0';
+    right.style.width = 'auto';
+    const now = Math.round(((edge - app.getBoundingClientRect().left) / app.clientWidth) * 100);
     handle.setAttribute('aria-valuenow', String(now));
   };
 

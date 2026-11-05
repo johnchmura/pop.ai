@@ -6,8 +6,8 @@ The page loads four JSON files, in the same shapes the advisor has always used:
   /data/forecast.json   tentative future CS offerings      (advisor_data)
   /data/programs.json   degree programs                    (advisor_data)
 
-COURSE DATA, the text Claude reads in every chat, is built here too (course_data_text).
-It matches the advisor's JavaScript version (lib/context.js) character for character; a test checks it.
+COURSE DATA is built here: course_data_text is the full catalog (tests match the JavaScript
+version), and course_excerpt is the short slice one chat or plan sends.
 """
 
 from __future__ import annotations
@@ -293,6 +293,103 @@ def program_lines(prog: dict) -> list[str]:
     return lines
 
 
+def course_row_json(c: dict) -> str:
+    row: dict[str, Any] = {"code": c["code"], "title": c["title"], "credits": c["credits"], "department": c["department"]}
+    if c.get("satisfies"):
+        row["satisfies"] = c["satisfies"]
+    if c.get("bridge"):
+        row["graduateBridge"] = True
+    if c.get("stub"):
+        row["note"] = "Not in the app catalog file. Only section data is known."
+    row["description"] = c["description"]
+    row["prereqText"] = c.get("prereqText") or "None"
+    row["prereq"] = c.get("prereq")
+    if c.get("note"):
+        row["note"] = c["note"]
+    row["unlocks"] = [d["code"] + ("*" if d["concurrent"] else "") for d in c["dependents"]]
+    row["sections"] = [compact_section(s) for s in c["sections"]]
+    if c.get("futureTerms") is not None:
+        row["futureTerms"] = c["futureTerms"]
+    if c.get("forecastNote"):
+        row["forecastNote"] = c["forecastNote"]
+    return _js(row)
+
+
+_CODE_IN_TEXT = re.compile(r"\b([A-Za-z]{2,4})\s*[-_]?\s*(\d{3})\b")
+_WORD = re.compile(r"[A-Za-z]{3,}")
+_CODE_FILLER = {"and", "or", "the", "with", "for", "after", "before", "an", "to", "of"}
+EXCERPT_LIMIT = 60
+
+
+def codes_in_text(index: dict, text: str) -> list[str]:
+    """Course codes written in the text, in the order they appear, that exist in the index."""
+    courses = index["courses"]
+    found: list[str] = []
+    seen: set[str] = set()
+    for match in _CODE_IN_TEXT.finditer(text or ""):
+        code = f"{match.group(1).upper()} {match.group(2)}"
+        if code in courses and code not in seen:
+            seen.add(code)
+            found.append(code)
+    return found
+
+
+def question_is_only_codes(text: str) -> bool:
+    """True when the question names courses and little else, so a topic search would be noise."""
+    rest = _CODE_IN_TEXT.sub(" ", text or "")
+    return not any(word.lower() not in _CODE_FILLER for word in _WORD.findall(rest))
+
+
+def _offered(course: dict) -> bool:
+    return bool(course.get("sections"))
+
+
+def course_excerpt(index: dict, texts: list[str], extra_codes: list[str] | None = None, limit: int = EXCERPT_LIMIT) -> str:
+    """Course rows for codes named in the texts, plus one hop, and only when that course has sections."""
+    courses = index["courses"]
+    chosen: list[str] = []
+    seen: set[str] = set()
+    not_offered: list[str] = []
+
+    def add(code: str) -> None:
+        course = courses.get(code)
+        if course and _offered(course) and code not in seen and len(chosen) < limit:
+            seen.add(code)
+            chosen.append(code)
+
+    question = texts[0] if texts else ""
+    for code in codes_in_text(index, question):
+        course = courses[code]
+        if _offered(course):
+            add(code)
+        elif code not in not_offered:
+            not_offered.append(code)
+    for text in texts[1:]:
+        for code in codes_in_text(index, text):
+            add(code)
+    for raw in extra_codes or []:
+        add(normalize_code(raw) or raw)
+    for code in list(chosen):
+        course = courses[code]
+        for leaf in _leaves(course.get("prereq")):
+            add(leaf["code"])
+        for dep in course.get("dependents") or []:
+            add(dep["code"])
+    lines = ["COURSE DATA",
+             f"Matching slice of the catalog ({len(chosen)} courses), not the whole catalog. "
+             "If a course is not listed, say so instead of inventing its details."]
+    if not_offered:
+        lines.append(f"Not offered in {index['semester']}: {', '.join(not_offered)}.")
+    lines.append(f"Catalog source: {index['source']}")
+    lines.append(f"Semester for sections: {index['semester']}{' (term code ' + index['termCode'] + ')' if index['termCode'] else ''}")
+    lines.append("SECTIONS ARE SAMPLE DATA: CRNs, times, rooms, seats, and instructor names are made up for the demo. Say this when you mention them."
+                 if index["sample"] else
+                 "Sections were imported from the live IIT Course Status Report through Pop. Seats may have changed since import.")
+    lines.append("One JSON object per course:")
+    lines.extend(course_row_json(courses[code]) for code in chosen)
+    return "\n".join(lines)
+
+
 def course_data_text(index: dict, programs: list[dict]) -> str:
     lines = ["COURSE DATA", f"Catalog source: {index['source']}",
              f"Semester for sections: {index['semester']}{' (term code ' + index['termCode'] + ')' if index['termCode'] else ''}"]
@@ -308,25 +405,7 @@ def course_data_text(index: dict, programs: list[dict]) -> str:
     for c in index["list"]:
         if c.get("stub") and c["level"] >= 500:
             continue
-        row: dict[str, Any] = {"code": c["code"], "title": c["title"], "credits": c["credits"], "department": c["department"]}
-        if c.get("satisfies"):
-            row["satisfies"] = c["satisfies"]
-        if c.get("bridge"):
-            row["graduateBridge"] = True
-        if c.get("stub"):
-            row["note"] = "Not in the app catalog file. Only section data is known."
-        row["description"] = c["description"]
-        row["prereqText"] = c.get("prereqText") or "None"
-        row["prereq"] = c.get("prereq")
-        if c.get("note"):
-            row["note"] = c["note"]
-        row["unlocks"] = [d["code"] + ("*" if d["concurrent"] else "") for d in c["dependents"]]
-        row["sections"] = [compact_section(s) for s in c["sections"]]
-        if c.get("futureTerms") is not None:
-            row["futureTerms"] = c["futureTerms"]
-        if c.get("forecastNote"):
-            row["forecastNote"] = c["forecastNote"]
-        lines.append(_js(row))
+        lines.append(course_row_json(c))
     if grad_stubs:
         names = "; ".join(f"{c['code']}{' ' + c['title'] if c['title'] else ''}" for c in grad_stubs)
         lines.append(f"Graduate and professional courses with sections in {index['semester']} (not in the catalog file; ask the student to search the app for times): {names}.")

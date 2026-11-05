@@ -7,10 +7,10 @@ The page in web/ does the advisor logic (search, schedule, graph, degree audit, 
 This server:
   GET  /                    the page (web/)
   GET  /data/*.json         catalog, sections, forecast, programs, built from the database
-  GET  /api/health          what is loaded, and whether Claude is on
-  POST /api/chat            streams Claude's answer (server-sent events)
-  POST /api/plan            asks Claude for a semester plan (the page checks it)
-  POST /api/transcript      reads a scanned transcript with Claude
+  GET  /api/health          what is loaded, and whether a model is on
+  POST /api/chat            streams the model's answer (server-sent events)
+  POST /api/plan            asks the model for a semester plan (the page checks it)
+  POST /api/transcript      reads a scanned transcript with the model
   POST /api/search/semantic Pop's meaning-based search, when its model is installed
 """
 
@@ -33,13 +33,17 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from app.advisor.catalog import (
     build_index,
     catalog_json,
-    course_data_text,
+    course_excerpt,
     forecast_json,
     programs_json,
+    question_is_only_codes,
     sections_json,
 )
 from app.advisor.claude import ClaudeError, call_claude, stream_claude
+from app.advisor.openai_client import OpenAIError, call_openai, stream_openai
 from app.advisor.faculty import FacultyIndex, faculty_block
+from app.advisor.guard import REFUSAL, screen
+from app.advisor.tools import TOOLS, run_tool, tool_note
 from app.advisor.store import open_db, seed, is_seeded, get_value
 from app.db import ROOT
 
@@ -57,9 +61,29 @@ def _int_env(name: str, default: int, low: int, high: int) -> int:
 
 class Config:
     def __init__(self) -> None:
-        self.api_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
-        self.model = os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-5-5"
-        self.base_url = os.getenv("ANTHROPIC_BASE_URL") or "https://api.anthropic.com"
+        # LLM_PROVIDER=openai wins even when a dead ANTHROPIC_API_KEY is still in .env.
+        # Unset: Claude if its key is set, otherwise OpenAI, otherwise offline.
+        provider = (os.getenv("LLM_PROVIDER") or "").strip().lower()
+        anthropic_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
+        openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+        if provider == "openai":
+            self.provider = "openai"
+        elif provider == "claude":
+            self.provider = "claude"
+        elif anthropic_key:
+            self.provider = "claude"
+        elif openai_key:
+            self.provider = "openai"
+        else:
+            self.provider = "claude"
+        if self.provider == "openai":
+            self.api_key = openai_key
+            self.model = os.getenv("OPENAI_MODEL") or "gpt-5-mini"
+            self.base_url = (os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip()
+        else:
+            self.api_key = anthropic_key
+            self.model = os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-5-5"
+            self.base_url = os.getenv("ANTHROPIC_BASE_URL") or "https://api.anthropic.com"
         self.max_tokens = _int_env("MAX_TOKENS", 4096, 128, 8192)
         self.rate_limit = _int_env("CHAT_RATE_LIMIT", 30, 1, 10_000)  # requests per IP per 5 minutes
         self.instructions_file = Path(os.getenv("ADVISOR_INSTRUCTIONS") or ROOT / "advisor_instructions.txt")
@@ -71,13 +95,13 @@ config = Config()
 
 
 class Data:
-    """JSON files and COURSE DATA, built from the database. Restart the server after Pop scrapes again."""
+    """JSON files and the course index, built from the database. Restart the server after Pop scrapes again."""
 
     def __init__(self) -> None:
         self.files: dict[str, bytes] = {}
         self.faculty: FacultyIndex | None = None
         self.faculty_read_on = ""
-        self.course_data = ""
+        self.index: dict[str, Any] = {}
         self.health: dict[str, Any] = {}
 
     def load(self) -> None:
@@ -102,11 +126,8 @@ class Data:
         finally:
             conn.close()
         self.faculty = FacultyIndex(faculty) if faculty else None
-        index = build_index(catalog, sections, forecast)
-        self.course_data = course_data_text(index, programs["programs"])
-        if len(self.course_data) > 700_000:
-            print(f"Warning: COURSE DATA is {len(self.course_data):,} characters. Claude may reject requests this long; "
-                  "see README (a full catalog scrape adds long descriptions).")
+        self.index = build_index(catalog, sections, forecast)
+        index = self.index
         dump = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")  # noqa: E731
         self.files = {
             "catalog.json": dump(catalog),
@@ -194,7 +215,12 @@ async def _headers(request: Request, call_next):
 def _startup() -> None:
     data.load()
     instructions()  # fail fast if the file is missing
-    mode = "Claude" if config.api_key else "offline mode (set ANTHROPIC_API_KEY in .env to use Claude)"
+    if config.api_key and config.provider == "openai":
+        mode = f"OpenAI ({config.model})"
+    elif config.api_key:
+        mode = "Claude"
+    else:
+        mode = "offline mode (set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env)"
     print(f"advisor.: {data.health['courses']} courses, {data.health['sections']} sections for {data.health['semester']}. Chat: {mode}")
 
 
@@ -253,10 +279,11 @@ def student_context(value: Any) -> str:
     return text[:200_000] or "STUDENT CONTEXT\n(none)"
 
 
-def system_blocks(context_text: str, question: str = "") -> list[dict[str, Any]]:
+def system_blocks(context_text: str, question: str = "", extra_codes: list[str] | None = None) -> list[dict[str, Any]]:
+    excerpt = course_excerpt(data.index, [question, context_text], extra_codes) if data.index else "COURSE DATA\n(catalog not loaded)"
     blocks = [
         {"type": "text", "text": instructions()},
-        {"type": "text", "text": data.course_data, "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": excerpt, "cache_control": {"type": "ephemeral"}},
         {"type": "text", "text": context_text},
     ]
     # research questions get the best-matching faculty from IIT's directory
@@ -266,12 +293,56 @@ def system_blocks(context_text: str, question: str = "") -> list[dict[str, Any]]
     return blocks
 
 
+async def matching_codes(question: str) -> list[str]:
+    """Top semantic matches for a normal question. Course-code questions skip this."""
+    if not question.strip() or question_is_only_codes(question) or not data.index or not semantic_available():
+        return []
+    try:
+        from app.api import embed_query
+        from app.db import semantic_search
+
+        vector = await asyncio.to_thread(embed_query, question[:300])
+        hits = await asyncio.to_thread(semantic_search, vector, data.health.get("semester") or "", 12)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[semantic] {exc!r}")
+        return []
+    return [h.course_name for h in hits]
+
+
 # ----- data and health
+
+
+def llm_mode() -> str:
+    """What /api/health reports. The page builds an AI plan for any mode other than offline."""
+    if not config.api_key:
+        return "offline"
+    return "openai" if config.provider == "openai" else "claude"
+
+
+def _model_name() -> str:
+    return "OpenAI" if config.provider == "openai" else "Claude"
+
+
+async def stream_model(**kwargs: Any):
+    fn = stream_openai if config.provider == "openai" else stream_claude
+    async for item in fn(**kwargs):
+        yield item
+
+
+async def call_model(**kwargs: Any):
+    fn = call_openai if config.provider == "openai" else call_claude
+    return await fn(**kwargs)
+
+
+async def _screen_call(**kwargs: Any):
+    return await call_model(
+        api_key=config.api_key, base_url=config.base_url, model=config.model, **kwargs,
+    )
 
 
 @app.get("/api/health")
 def health() -> JSONResponse:
-    mode = "claude" if config.api_key else "offline"
+    mode = llm_mode()
     return JSONResponse({"ok": True, "mode": mode, "model": config.model if config.api_key else None,
                          **data.health, "semantic": semantic_available(), "foundation": "pop"},
                         headers={"Cache-Control": "no-store"})
@@ -288,6 +359,71 @@ def data_file(name: str) -> Response:
 # ----- chat
 
 
+_TOOL_ROUNDS = 4
+
+
+def _merge_tool_call(calls: dict[int, dict[str, str]], delta: dict) -> None:
+    slot = calls.setdefault(int(delta.get("index") or 0), {"id": "", "name": "", "arguments": ""})
+    if delta.get("id"):
+        slot["id"] = str(delta["id"])
+    function = delta.get("function") or {}
+    if function.get("name"):
+        slot["name"] += str(function["name"])
+    if function.get("arguments"):
+        slot["arguments"] += str(function["arguments"])
+
+
+async def _openai_chat(send, messages: list[dict], context_text: str):
+    """Stream an OpenAI chat that can look up courses. At most four model rounds."""
+    semester = (data.index or {}).get("semester") or data.health.get("semester") or ""
+    question = messages[-1]["content"] if messages else ""
+    blocks = [
+        {"type": "text", "text": instructions()},
+        {"type": "text", "text": tool_note(semester)},
+        {"type": "text", "text": context_text},
+    ]
+    faculty = faculty_block(data.faculty, question, data.faculty_read_on)
+    if faculty:
+        blocks.append({"type": "text", "text": faculty})
+    thread: list[dict] = list(messages)
+    for round_index in range(_TOOL_ROUNDS):
+        calls: dict[int, dict[str, str]] = {}
+        text_parts: list[str] = []
+        stop = None
+        async for item in stream_openai(api_key=config.api_key, base_url=config.base_url, model=config.model,
+                                        max_tokens=config.max_tokens, system=blocks, messages=thread, tools=TOOLS):
+            if "text" in item:
+                text_parts.append(item["text"])
+                yield send({"type": "text", "text": item["text"]})
+            elif "tool_call" in item:
+                _merge_tool_call(calls, item["tool_call"])
+            else:
+                stop = item.get("stop_reason")
+        if stop != "tool_calls" or not calls:
+            if stop == "max_tokens":
+                yield send({"type": "text", "text": "\n\n_(Answer cut short. Ask me to continue.)_"})
+            yield send({"type": "done"})
+            return
+        if round_index == _TOOL_ROUNDS - 1:
+            yield send({"type": "text", "text": "\n\n_(Looked up courses several times. Ask a narrower question.)_"})
+            yield send({"type": "done"})
+            return
+        yield send({"type": "status", "text": "Looking up courses..."})
+        ordered = []
+        for index in sorted(calls):
+            call = calls[index]
+            ordered.append({
+                "id": call["id"] or f"call_{index}",
+                "type": "function",
+                "function": {"name": call["name"], "arguments": call["arguments"]},
+            })
+        thread.append({"role": "assistant", "content": "".join(text_parts) or None, "tool_calls": ordered})
+        for call in ordered:
+            result = await run_tool(call["function"]["name"], call["function"]["arguments"], data.index)
+            thread.append({"role": "tool", "tool_call_id": call["id"], "content": result})
+    yield send({"type": "done"})
+
+
 @app.post("/api/chat")
 async def chat(request: Request):
     if rate_limited(request):
@@ -300,19 +436,29 @@ async def chat(request: Request):
     if not messages:
         return error(400, "Ask a question first.")
     if not config.api_key:
-        return error(503, "No Claude API key is set on the server.", mode="offline")
+        return error(503, f"No {_model_name()} API key is set on the server.", mode="offline")
     context_text = student_context(body.get("studentContext"))
 
     async def events():
         def send(obj: dict) -> bytes:
             return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n".encode("utf-8")
 
-        yield send({"type": "meta", "mode": "claude", "model": config.model})
+        yield send({"type": "meta", "mode": llm_mode(), "model": config.model})
         try:
+            if not await screen(messages, _screen_call):
+                yield send({"type": "text", "text": REFUSAL})
+                yield send({"type": "done"})
+                return
+            if config.provider == "openai":
+                async for chunk in _openai_chat(send, messages, context_text):
+                    yield chunk
+                return
             stop = None
-            async for item in stream_claude(api_key=config.api_key, base_url=config.base_url, model=config.model,
-                                            max_tokens=config.max_tokens, system=system_blocks(context_text, messages[-1]["content"]),
-                                            messages=messages):
+            extra = await matching_codes(messages[-1]["content"])
+            async for item in stream_model(api_key=config.api_key, base_url=config.base_url, model=config.model,
+                                           max_tokens=config.max_tokens,
+                                           system=system_blocks(context_text, messages[-1]["content"], extra),
+                                           messages=messages):
                 if "text" in item:
                     yield send({"type": "text", "text": item["text"]})
                 else:
@@ -320,13 +466,13 @@ async def chat(request: Request):
             if stop == "max_tokens":
                 yield send({"type": "text", "text": "\n\n_(Answer cut short. Ask me to continue.)_"})
             yield send({"type": "done"})
-        except ClaudeError as exc:
+        except (ClaudeError, OpenAIError) as exc:
             yield send({"type": "error", "message": str(exc)})
         except asyncio.CancelledError:  # the student closed the page or pressed Stop
             raise
         except Exception as exc:  # noqa: BLE001
             print(f"[chat] {exc!r}")
-            yield send({"type": "error", "message": "Could not reach the Claude API. Check your internet connection and try again."})
+            yield send({"type": "error", "message": f"Could not reach the {_model_name()} API. Check your internet connection and try again."})
 
     return StreamingResponse(events(), media_type="text/event-stream; charset=utf-8",
                              headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
@@ -366,7 +512,7 @@ async def plan(request: Request):
     if not isinstance(body, dict) or not isinstance(body.get("studentContext"), str):
         return error(400, 'Send JSON: { "studentContext": "...", "userText": "..." }.')
     if not config.api_key:
-        return error(503, "No Claude API key is set on the server.", mode="offline")
+        return error(503, f"No {_model_name()} API key is set on the server.", mode="offline")
     user_text = str(body.get("userText") or "Make my recommended plan now.")[:40_000]
     # the same request gets the same plan (temperature 0, and a cache for exact repeats)
     key = _cache_key("plan", config.model, instructions(), body["studentContext"], user_text)
@@ -374,12 +520,14 @@ async def plan(request: Request):
         if key in _answers:
             text, stop = _answers[key]
         else:
-            text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
-                                           system=system_blocks(student_context(body["studentContext"])),
-                                           messages=[{"role": "user", "content": user_text}], temperature=0)
+            context_text = student_context(body["studentContext"])
+            extra = await matching_codes(user_text)
+            text, stop = await call_model(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
+                                          system=system_blocks(context_text, user_text, extra),
+                                          messages=[{"role": "user", "content": user_text}], temperature=0)
             if stop != "max_tokens":
                 _remember(key, (text, stop))
-    except ClaudeError as exc:
+    except (ClaudeError, OpenAIError) as exc:
         return error(502, str(exc))
     except Exception as exc:  # noqa: BLE001
         print(f"[plan] {exc!r}")
@@ -407,7 +555,8 @@ async def transcript(request: Request):
     if rate_limited(request):
         return error(429, "Too many requests in a short time. Wait a few minutes and try again.")
     if not config.api_key:
-        return error(503, "Reading transcripts with Claude needs ANTHROPIC_API_KEY on the server. "
+        key_name = "OPENAI_API_KEY" if config.provider == "openai" else "ANTHROPIC_API_KEY"
+        return error(503, f"Reading transcripts with {_model_name()} needs {key_name} on the server. "
                           "You can still upload a text-based PDF, an .html or .txt file, or paste the text.")
     try:
         body = await read_json(request, 12 * 1024 * 1024)
@@ -419,7 +568,7 @@ async def transcript(request: Request):
     if isinstance(file, dict):
         media, b64 = str(file.get("mediaType") or ""), file.get("data")
         if media not in MEDIA:
-            return error(400, "Claude can read PDF, PNG, JPEG, GIF, or WebP files.")
+            return error(400, f"{_model_name()} can read PDF, PNG, JPEG, GIF, or WebP files.")
         if not isinstance(b64, str) or not _B64.match(b64):
             return error(400, "The file data is not valid.")
         kind = "document" if media == "application/pdf" else "image"
@@ -435,19 +584,19 @@ async def transcript(request: Request):
         if key in _answers:
             text, stop = _answers[key]
         else:
-            text, stop = await call_claude(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
-                                           system=TRANSCRIPT_PROMPT, messages=[{"role": "user", "content": content}], temperature=0)
+            text, stop = await call_model(api_key=config.api_key, base_url=config.base_url, model=config.model, max_tokens=8000,
+                                          system=TRANSCRIPT_PROMPT, messages=[{"role": "user", "content": content}], temperature=0)
             if stop != "max_tokens":
                 _remember(key, (text, stop))
-    except ClaudeError as exc:
-        return error(502, f"Claude could not read the transcript: {exc}")
+    except (ClaudeError, OpenAIError) as exc:
+        return error(502, f"{_model_name()} could not read the transcript: {exc}")
     except Exception as exc:  # noqa: BLE001
         print(f"[transcript] {exc!r}")
-        return error(502, "Could not reach the Claude API. Try again.")
+        return error(502, f"Could not reach the {_model_name()} API. Try again.")
     try:
         parsed = _extract_json(text)
     except ValueError:
-        return error(502, "Claude did not return a course list. Try a clearer file or paste the text.")
+        return error(502, f"{_model_name()} did not return a course list. Try a clearer file or paste the text.")
     courses = [c for c in (parsed.get("courses") or []) if isinstance(c, dict)][:400] if isinstance(parsed, dict) else []
     warnings = [w[:300] for w in (parsed.get("warnings") or []) if isinstance(w, str)][:20]
     if stop == "max_tokens":
